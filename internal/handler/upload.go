@@ -48,16 +48,16 @@ func (h *Upload) Form(c fiber.Ctx) error {
 func (h *Upload) Submit(c fiber.Ctx) error {
 	slug := strings.Clone(strings.TrimSpace(c.FormValue("slug")))
 	if !safeSlugRe.MatchString(slug) {
-		return c.SendStatus(http.StatusBadRequest)
+		return c.Status(http.StatusBadRequest).SendString("invalid slug (use letters, digits, _ or -)")
 	}
 	title := strings.Clone(strings.TrimSpace(c.FormValue("title")))
 	if title == "" {
-		return c.SendStatus(http.StatusBadRequest)
+		return c.Status(http.StatusBadRequest).SendString("title is required")
 	}
 
 	fh, err := c.FormFile("file")
 	if err != nil {
-		return c.SendStatus(http.StatusBadRequest)
+		return c.Status(http.StatusBadRequest).SendString("file is required")
 	}
 	src, err := fh.Open()
 	if err != nil {
@@ -70,17 +70,26 @@ func (h *Upload) Submit(c fiber.Ctx) error {
 	}
 
 	target := filepath.Join(h.contentDir, slug)
+	// Replace any previous extraction for this slug so re-uploads are clean.
+	_ = os.RemoveAll(target)
 	if err := os.MkdirAll(target, 0o755); err != nil {
 		return err
 	}
 
+	entry := "index.html"
 	lower := strings.ToLower(fh.Filename)
 	switch {
 	case strings.HasSuffix(lower, ".zip"):
 		if err := extractZip(data, target); err != nil {
 			_ = os.RemoveAll(target)
-			return c.SendStatus(http.StatusBadRequest)
+			return c.Status(http.StatusBadRequest).SendString("invalid zip: " + err.Error())
 		}
+		found, err := findHTMLEntry(target)
+		if err != nil {
+			_ = os.RemoveAll(target)
+			return c.Status(http.StatusBadRequest).SendString(err.Error())
+		}
+		entry = found
 	case strings.HasSuffix(lower, ".html"), strings.HasSuffix(lower, ".htm"):
 		if err := os.WriteFile(filepath.Join(target, "index.html"), data, 0o644); err != nil {
 			_ = os.RemoveAll(target)
@@ -88,7 +97,7 @@ func (h *Upload) Submit(c fiber.Ctx) error {
 		}
 	default:
 		_ = os.RemoveAll(target)
-		return c.SendStatus(http.StatusBadRequest)
+		return c.Status(http.StatusBadRequest).SendString("file must be .zip or .html")
 	}
 
 	a := model.Article{
@@ -97,7 +106,7 @@ func (h *Upload) Submit(c fiber.Ctx) error {
 		Type:       model.ArticleTypeHTMLUpload,
 		Status:     model.Status(strings.Clone(c.FormValue("status"))),
 		Visibility: model.Visibility(strings.Clone(c.FormValue("visibility"))),
-		Body:       "index.html",
+		Body:       entry,
 		RawMode:    c.FormValue("raw_mode") == "on",
 		Tags:       []string{},
 	}
@@ -115,16 +124,43 @@ func (h *Upload) Submit(c fiber.Ctx) error {
 	return c.Redirect().To("/admin")
 }
 
-// extractZip writes a zip's entries under target, rejecting any entry whose
-// path would escape target (zip-slip). Directories are created; files are
-// written with 0o644.
+// extractZip writes a zip's entries under target, rejecting zip-slip, skipping
+// macOS junk (__MACOSX / ._* files), and stripping a single shared top-level
+// folder so index.html lands at the slug root when the archive is
+// "folder/index.html" rather than "index.html".
 func extractZip(data []byte, target string) error {
 	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
 	if err != nil {
 		return err
 	}
+
+	// Collect usable entry names and detect a single root folder prefix.
+	var names []string
 	for _, f := range zr.File {
-		path := filepath.Join(target, f.Name)
+		name := filepath.ToSlash(f.Name)
+		if shouldSkipZipEntry(name) {
+			continue
+		}
+		names = append(names, name)
+	}
+	if len(names) == 0 {
+		return errors.New("zip has no usable files (empty or only __MACOSX junk)")
+	}
+	prefix := sharedRootPrefix(names)
+
+	for _, f := range zr.File {
+		name := filepath.ToSlash(f.Name)
+		if shouldSkipZipEntry(name) {
+			continue
+		}
+		rel := name
+		if prefix != "" {
+			rel = strings.TrimPrefix(name, prefix)
+			if rel == "" {
+				continue // the root folder entry itself
+			}
+		}
+		path := filepath.Join(target, filepath.FromSlash(rel))
 		if !within(target, path) {
 			return errors.New("zip entry escapes target directory: " + f.Name)
 		}
@@ -142,6 +178,99 @@ func extractZip(data []byte, target string) error {
 		}
 	}
 	return nil
+}
+
+// shouldSkipZipEntry drops macOS resource forks and empty names.
+func shouldSkipZipEntry(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" || name == "." {
+		return true
+	}
+	// __MACOSX/… and AppleDouble "._file"
+	base := filepath.Base(name)
+	if strings.HasPrefix(name, "__MACOSX/") || strings.Contains(name, "/__MACOSX/") {
+		return true
+	}
+	if strings.HasPrefix(base, "._") {
+		return true
+	}
+	return false
+}
+
+// sharedRootPrefix returns "folder/" when every path is under that single
+// top-level directory; otherwise "".
+func sharedRootPrefix(names []string) string {
+	var prefix string
+	for _, n := range names {
+		n = strings.TrimPrefix(n, "./")
+		parts := strings.SplitN(n, "/", 2)
+		if len(parts) < 2 {
+			// File at zip root → no shared folder to strip.
+			return ""
+		}
+		root := parts[0] + "/"
+		if prefix == "" {
+			prefix = root
+			continue
+		}
+		if prefix != root {
+			return ""
+		}
+	}
+	return prefix
+}
+
+// findHTMLEntry returns a path relative to root for the page entry:
+// prefers index.html / index.htm (any depth, shallowest first), else the
+// shallowest *.html file.
+func findHTMLEntry(root string) (string, error) {
+	var candidates []string
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			base := info.Name()
+			if base == "__MACOSX" || strings.HasPrefix(base, ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		lower := strings.ToLower(info.Name())
+		if strings.HasSuffix(lower, ".html") || strings.HasSuffix(lower, ".htm") {
+			rel, err := filepath.Rel(root, path)
+			if err != nil {
+				return err
+			}
+			candidates = append(candidates, filepath.ToSlash(rel))
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(candidates) == 0 {
+		return "", errors.New("zip has no .html entry file")
+	}
+	// Prefer index.html (any depth), then shallowest path.
+	best := candidates[0]
+	bestScore := entryScore(best)
+	for _, c := range candidates[1:] {
+		if s := entryScore(c); s < bestScore {
+			best, bestScore = c, s
+		}
+	}
+	return best, nil
+}
+
+// entryScore: lower is better. index.html preferred; fewer path segments preferred.
+func entryScore(rel string) int {
+	score := strings.Count(rel, "/") * 10
+	base := strings.ToLower(filepath.Base(rel))
+	if base == "index.html" || base == "index.htm" {
+		return score
+	}
+	return score + 100
 }
 
 func copyZipEntry(f *zip.File, path string) error {

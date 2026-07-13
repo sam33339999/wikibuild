@@ -29,13 +29,13 @@
 | 視圖 (SSR) | [templ](https://templ.guide) | 型別安全的 Go 模板，所有頁面／表單結構 |
 | 前端互動層 | [Alpine.js](https://alpinejs.dev) | 反應式互動：開關、modal、拖拉、自動儲存（~15KB，無建置） |
 | AJAX 操作 | [HTMX](https://htmx.org) | 列表刷新、批次操作、即時搜尋、slug 檢查，免寫 fetch（~14KB，無建置） |
-| Markdown 編輯器 | [Milkdown](https://milkdown.dev) | 後台所見即所得 + 源碼切換，CDN 載入 |
+| Markdown 編輯器 | [Vditor](https://b3log.org/vditor/) | 後台即時渲染（IR）/ WYSIWYG / 源碼，穩定 CDN（UMD） |
 | 內容渲染（前台） | highlight.js / Mermaid / KaTeX | 程式碼、圖表、數學，**按需 lazy-load** |
 | Migrations | [golang-migrate](https://github.com/golang-migrate/migrate) | SQL 版控 |
 | 密碼雜湊 | bcrypt | |
 | Session | HMAC 簽章 cookie | protected 文章授權用 |
 
-> **前端策略**：不導入 SPA 框架。templ 負責 SSR（前台 SEO、後台結構），Alpine + HTMX 以 script tag 注入互動，Milkdown 作為現成編輯器元件掛入 templ 容器。零 npm 建置，`go build` 仍為單一成品。僅當單一功能元件生態吃重（如知識圖譜）時，才為該頁引入專用庫（Cytoscape/D3），非全站框架。
+> **前端策略**：不導入 SPA 框架。templ 負責 SSR（前台 SEO、後台結構），Alpine + HTMX 以 script tag 注入互動，Vditor 作為後台 Markdown 編輯器（IR 即時渲染）掛入 templ。零 npm 建置，`go build` 仍為單一成品。僅當單一功能元件生態吃重（如知識圖譜）時，才為該頁引入專用庫，非全站框架。
 
 ## 目錄結構
 

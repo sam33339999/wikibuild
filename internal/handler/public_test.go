@@ -38,9 +38,10 @@ func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fak
 	app.Get("/archive/:year/:month", h.ArchiveMonth)
 	app.Get("/tag/:tag", h.Tag)
 	app.Get("/preview/:token", h.Preview)
-	app.Get("/:slug", h.Article)
 	app.Get("/:slug/unlock", h.UnlockForm)
 	app.Post("/:slug/unlock", h.UnlockSubmit)
+	app.Get("/:slug", h.Article)
+	app.Get("/:slug/*", h.UploadAsset)
 	return app, repo, signer, fc, dir
 }
 
@@ -292,8 +293,23 @@ func TestPublic_HtmlUpload_RawMode_ServedAsIs(t *testing.T) {
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/raw", nil))
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	body, _ := io.ReadAll(resp.Body)
-	// Raw mode serves the file verbatim — no layout chrome added.
-	require.Equal(t, fullDoc, string(body))
+	// Raw mode injects <base href="/slug/"> so relative assets resolve correctly.
+	require.Contains(t, string(body), `<base href="/raw/">`)
+	require.Contains(t, string(body), "raw content")
+	require.NotContains(t, string(body), "site-header", "no layout chrome in raw mode")
+}
+
+func TestPublic_HtmlUpload_ServesAssets(t *testing.T) {
+	app, repo, _, _, dir := publicApp(t)
+	seedHTMLUpload(t, repo, dir, "site", "Site", "<p>hi</p>", true)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "site", "css"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "site", "css", "a.css"), []byte("body{color:red}"), 0o644))
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/site/css/a.css", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	require.Equal(t, "body{color:red}", string(body))
 }
 
 func TestPublic_HtmlUpload_InjectedIntoLayout(t *testing.T) {
@@ -307,6 +323,23 @@ func TestPublic_HtmlUpload_InjectedIntoLayout(t *testing.T) {
 	// Injected: wrapped in the layout (has the article title) AND the content.
 	require.Contains(t, string(body), "Injected")
 	require.Contains(t, string(body), "injected content")
+	// Non-raw also needs base so relative assets resolve under /slug/.
+	require.Contains(t, string(body), `href="/inj/"`)
+}
+
+func TestPublic_HtmlUpload_Injected_ExtractsBodyAndBase(t *testing.T) {
+	app, repo, _, _, dir := publicApp(t)
+	full := `<!doctype html><html><head><title>X</title></head><body><p id="only">body only</p></body></html>`
+	seedHTMLUpload(t, repo, dir, "full", "Full", full, false)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/full", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `id="only"`)
+	require.Contains(t, s, `href="/full/"`)
+	// Should not nest a second full document shell from the upload.
+	require.NotContains(t, s, "<!doctype html><html><head><title>X</title>")
 }
 
 // --- wikilinks + backlinks (M4.2) ---

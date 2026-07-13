@@ -139,9 +139,12 @@ func New(d Deps) *fiber.App {
 	app.Get("/archive/:year/:month", pub.ArchiveMonth)
 	app.Get("/tag/:tag", pub.Tag)
 	app.Get("/preview/:token", pub.Preview)
-	app.Get("/:slug", pub.Article)
+	// Unlock before the wildcard asset route.
 	app.Get("/:slug/unlock", pub.UnlockForm)
 	app.Post("/:slug/unlock", pub.UnlockSubmit)
+	// Article entry + static assets for html_upload (relative css/slides/…).
+	app.Get("/:slug", pub.Article)
+	app.Get("/:slug/*", pub.UploadAsset)
 
 	return app
 }

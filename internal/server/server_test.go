@@ -561,9 +561,29 @@ func TestServer_LayoutIncludesThemeChrome(t *testing.T) {
 	s := string(body)
 	require.Contains(t, s, `/static/css/site.css`)
 	require.Contains(t, s, `/static/js/theme.js`)
-	require.Contains(t, s, `id="theme-toggle"`)
+	require.Contains(t, s, `data-theme-set="light"`)
+	require.Contains(t, s, `data-theme-set="dark"`)
 	require.Contains(t, s, `wikibuild-theme`) // FOUC-prevention script
 	require.Contains(t, s, `class="site-header"`)
+	require.Contains(t, s, `lucide@`)
+	require.Contains(t, s, `data-lucide="home"`)
+	require.Contains(t, s, `/static/js/icons.js`)
+}
+
+func TestServer_ArticleForm_HasVditorMount(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+	resp, err := do(app, http.MethodGet, "/admin/new", nil, cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `id="md-editor"`)
+	require.Contains(t, s, `data-editor="vditor"`)
+	require.Contains(t, s, `vditor@3.10.9`)
+	require.Contains(t, s, `/static/js/editor.js`)
+	require.Contains(t, s, `id="body"`)
+	require.Contains(t, s, `name="body"`)
 }
 
 func TestServer_Article_IncludesJSONLD(t *testing.T) {

@@ -101,6 +101,32 @@ func TestUpload_Zip_CreatesArticleAndExtractsFiles(t *testing.T) {
 	require.FileExists(t, filepath.Join(dir, "my-post", "css", "style.css"))
 }
 
+func TestUpload_Zip_StripsSingleRootFolderAndMacJunk(t *testing.T) {
+	// Typical macOS zip: Folder/index.html + __MACOSX junk + nested assets.
+	app, repo, dir := uploadApp(t)
+	zipBytes := makeZip(t, map[string]string{
+		"signoff-deck/index.html":           "<h1>Deck</h1>",
+		"signoff-deck/slides/01-title.html": "<p>slide</p>",
+		"__MACOSX/signoff-deck/._index.html": "junk",
+		"__MACOSX/._signoff-deck":            "junk",
+	})
+
+	resp, err := app.Test(uploadRequest(http.MethodPost, "/admin/upload",
+		"deck", "Deck", "published", "public", "on", "deck.zip", zipBytes))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+
+	a, err := repo.GetArticleBySlug(context.Background(), "deck")
+	require.NoError(t, err)
+	require.Equal(t, "index.html", a.Body, "root folder must be stripped so entry is at slug root")
+
+	require.FileExists(t, filepath.Join(dir, "deck", "index.html"))
+	require.FileExists(t, filepath.Join(dir, "deck", "slides", "01-title.html"))
+	// macOS junk must not be extracted
+	_, err = os.Stat(filepath.Join(dir, "deck", "__MACOSX"))
+	require.True(t, os.IsNotExist(err))
+}
+
 func TestUpload_HtmlFile_SavesAsIndex(t *testing.T) {
 	app, repo, dir := uploadApp(t)
 	html := []byte("<h1>Plain HTML</h1>")

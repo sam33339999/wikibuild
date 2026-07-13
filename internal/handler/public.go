@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"os"
@@ -180,15 +181,113 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 
 	data, err := readUploadFile(h.contentDir, a.Slug, a.Body)
 	if err != nil {
-		// Missing file for an existing article is a server error, not 404.
+		// Missing entry file: usually a zip that nested a folder and left
+		// Body=index.html pointing at a non-existent path.
+		if os.IsNotExist(err) {
+			return c.Status(http.StatusNotFound).SendString(
+				"upload entry file missing (re-upload the zip after the nested-folder fix)")
+		}
 		return err
 	}
+	// Relative paths (slides/x.html, css/a.css) always need a base under /slug/.
+	base := "/" + a.Slug + "/"
 	if a.RawMode {
-		// Serve the whole document as-is, no theme.
-		return c.Type("html").Send(data)
+		// Full document, no site chrome — still inject <base> for relative assets.
+		return c.Type("html").Send(ensureBaseHref(data, base))
 	}
-	// Inject the uploaded HTML into the layout (no TOC/reading time for pre-built pages).
-	return renderPageSEO(c, a.Title, publicviews.Article(a, string(data), nil, 0, nil, comments), pageSEO)
+	// Theme wrap: extract <body> when the upload is a full document, and set
+	// layout <base> so relative links still hit /:slug/* assets.
+	pageSEO.BaseHref = base
+	inner := extractHTMLBody(data)
+	return renderPageSEO(c, a.Title, publicviews.Article(a, inner, nil, 0, nil, comments), pageSEO)
+}
+
+// UploadAsset serves a file under contentDir/<slug>/ for html_upload articles.
+// Registered as GET /:slug/* so relative links from the entry page work.
+// Only published public (or admin) articles expose assets; private/protected
+// without access return 404.
+func (h *Public) UploadAsset(c fiber.Ctx) error {
+	slug := c.Params("slug")
+	// Fiber wildcard may be named "*" or include leading slash depending on version.
+	rel := c.Params("*")
+	if rel == "" {
+		rel = strings.TrimPrefix(c.Path(), "/"+slug+"/")
+	}
+	rel = strings.TrimPrefix(rel, "/")
+	if rel == "" || strings.Contains(rel, "..") {
+		return c.SendStatus(http.StatusNotFound)
+	}
+
+	a, err := h.repo.GetArticleBySlug(c.Context(), slug)
+	if err != nil {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	if a.Type != model.ArticleTypeHTMLUpload {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	// Same visibility gate as the article page (simplified: public+published
+	// or admin; protected needs unlock cookie).
+	decision := gate.Decide(gate.AccessInput{
+		Status:     a.Status,
+		Visibility: a.Visibility,
+		IsAdmin:    h.isAdmin(c),
+		Unlocked:   h.isUnlocked(c, a.ID),
+	})
+	if decision != gate.Allow {
+		return c.SendStatus(http.StatusNotFound)
+	}
+
+	path := filepath.Join(h.contentDir, slug, filepath.FromSlash(rel))
+	if !within(filepath.Join(h.contentDir, slug), path) {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	return c.SendFile(path)
+}
+
+// ensureBaseHref inserts <base href="..."> after <head> when the document has
+// no base tag yet, so relative asset URLs resolve under the article slug.
+func ensureBaseHref(html []byte, href string) []byte {
+	lower := bytes.ToLower(html)
+	if bytes.Contains(lower, []byte("<base")) {
+		return html
+	}
+	tag := []byte(`<base href="` + href + `">`)
+	// Prefer after <head ...>
+	if i := bytes.Index(lower, []byte("<head")); i >= 0 {
+		// find end of opening head tag
+		j := bytes.IndexByte(html[i:], '>')
+		if j >= 0 {
+			at := i + j + 1
+			out := make([]byte, 0, len(html)+len(tag)+1)
+			out = append(out, html[:at]...)
+			out = append(out, '\n')
+			out = append(out, tag...)
+			out = append(out, html[at:]...)
+			return out
+		}
+	}
+	// Fallback: prepend
+	return append(tag, html...)
+}
+
+// extractHTMLBody returns the inner HTML of <body> when present; otherwise the
+// original bytes as a string. Used when wrapping uploads in the site layout.
+func extractHTMLBody(html []byte) string {
+	lower := bytes.ToLower(html)
+	start := bytes.Index(lower, []byte("<body"))
+	if start < 0 {
+		return string(html)
+	}
+	gt := bytes.IndexByte(html[start:], '>')
+	if gt < 0 {
+		return string(html)
+	}
+	innerStart := start + gt + 1
+	end := bytes.Index(lower[innerStart:], []byte("</body>"))
+	if end < 0 {
+		return string(html[innerStart:])
+	}
+	return string(html[innerStart : innerStart+end])
 }
 
 func (h *Public) commentConfig(c fiber.Ctx) publicviews.CommentConfig {

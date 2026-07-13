@@ -1,0 +1,129 @@
+/* Admin editor host (Vditor) + theme switcher. */
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.editor-field {
+  margin: 1rem 0 1.25rem;
+}
+
+.editor-field > label {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--fg);
+}
+
+.editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.editor-toolbar .meta {
+  color: var(--fg-muted);
+}
+
+.md-editor-host {
+  min-height: 24rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+  position: relative;
+}
+
+.md-editor-host.is-loading::after {
+  content: "載入編輯器中…";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: var(--fg-muted);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  z-index: 5;
+  border-radius: 10px;
+}
+
+.md-editor-host .vditor {
+  border: 0 !important;
+  border-radius: 10px;
+}
+
+.md-editor-host .vditor-toolbar {
+  border-radius: 10px 10px 0 0;
+}
+
+/* Vditor can force light chrome; push readable tokens into its surface. */
+.md-editor-host .vditor,
+.md-editor-host .vditor-reset {
+  color: var(--fg);
+}
+
+#media-status {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+  min-height: 1.2em;
+}
+
+/* Theme switcher — high-contrast active state */
+.theme-switcher {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.theme-switcher button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--fg-muted) !important;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 0.35rem 0.65rem;
+  box-shadow: none !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.theme-switcher button + button {
+  border-left: 1px solid var(--border) !important;
+}
+
+.theme-switcher button .icon,
+.theme-switcher button [data-lucide] {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.theme-switcher button.is-active {
+  background: var(--accent) !important;
+  color: var(--on-accent) !important;
+  font-weight: 700;
+}
+
+.theme-switcher button:hover:not(.is-active) {
+  background: var(--bg) !important;
+  color: var(--fg) !important;
+}

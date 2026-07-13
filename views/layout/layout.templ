@@ -10,6 +10,9 @@ type SEO struct {
 	Type        string // "website" or "article"
 	Image       string
 	JSONLD      string // raw JSON for <script type="application/ld+json">
+	// BaseHref, when set, emits <base href="..."> so relative asset URLs
+	// (e.g. slides/x.html, css/a.css) resolve under the article slug.
+	BaseHref string
 }
 
 // Page wraps page content in the shared HTML document. title sets <title>.
@@ -26,6 +29,10 @@ templ Page(title string, content templ.Component, seo SEO) {
 				(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
 			</script>
 			<link rel="stylesheet" href="/static/css/site.css"/>
+			<link rel="stylesheet" href="/static/css/editor.css"/>
+			if seo.BaseHref != "" {
+				<base href={ seo.BaseHref }/>
+			}
 			if seo.Description != "" {
 				<meta name="description" content={ seo.Description }/>
 				<meta property="og:description" content={ seo.Description }/>
@@ -60,14 +67,45 @@ templ Page(title string, content templ.Component, seo SEO) {
 		</head>
 		<body>
 			<header class="site-header">
-				<a class="brand" href="/">WikiBuild</a>
+				<a class="brand" href="/">
+					<i data-lucide="book-open" class="icon icon-md" aria-hidden="true"></i>
+					<span>WikiBuild</span>
+				</a>
 				<nav class="site-nav" aria-label="主要">
-					<a href="/">首頁</a>
-					<a href="/search">搜尋</a>
-					<a href="/archive">封存</a>
-					<a href="/feed">RSS</a>
-					<a href="/admin">後台</a>
-					<button type="button" id="theme-toggle" class="theme-toggle" data-theme-mode="auto" aria-label="切換主題">主題：自動</button>
+					<a href="/">
+						<i data-lucide="home" class="icon icon-sm" aria-hidden="true"></i>
+						<span>首頁</span>
+					</a>
+					<a href="/search">
+						<i data-lucide="search" class="icon icon-sm" aria-hidden="true"></i>
+						<span>搜尋</span>
+					</a>
+					<a href="/archive">
+						<i data-lucide="calendar-days" class="icon icon-sm" aria-hidden="true"></i>
+						<span>封存</span>
+					</a>
+					<a href="/feed">
+						<i data-lucide="rss" class="icon icon-sm" aria-hidden="true"></i>
+						<span>RSS</span>
+					</a>
+					<a href="/admin">
+						<i data-lucide="layout-dashboard" class="icon icon-sm" aria-hidden="true"></i>
+						<span>後台</span>
+					</a>
+					<span class="theme-switcher" role="group" aria-label="主題">
+						<button type="button" data-theme-set="light" aria-pressed="false" title="淺色">
+							<i data-lucide="sun" class="icon icon-sm" aria-hidden="true"></i>
+							<span>淺色</span>
+						</button>
+						<button type="button" data-theme-set="dark" aria-pressed="false" title="深色">
+							<i data-lucide="moon" class="icon icon-sm" aria-hidden="true"></i>
+							<span>深色</span>
+						</button>
+						<button type="button" data-theme-set="auto" aria-pressed="true" title="跟隨系統">
+							<i data-lucide="monitor" class="icon icon-sm" aria-hidden="true"></i>
+							<span>自動</span>
+						</button>
+					</span>
 				</nav>
 			</header>
 			<main class="site-main">
@@ -76,6 +114,9 @@ templ Page(title string, content templ.Component, seo SEO) {
 			<footer class="site-footer">
 				<a href="/feed">RSS</a> · <a href="/sitemap.xml">Sitemap</a>
 			</footer>
+			// Lucide UMD then hydrate data-lucide nodes; theme last.
+			<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+			<script src="/static/js/icons.js" defer></script>
 			<script src="/static/js/theme.js" defer></script>
 		</body>
 	</html>
