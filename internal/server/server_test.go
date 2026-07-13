@@ -40,6 +40,7 @@ func buildApp(t *testing.T) *fiber.App {
 	_, err := repo.CreateUser(t.Context(), model.User{Username: "admin", PasswordHash: "H:s3cret"})
 	require.NoError(t, err)
 
+	root := t.TempDir()
 	fc := clock.NewFake(time.Unix(1_700_000_000, 0))
 	app := server.New(server.Deps{
 		Store:           repo,
@@ -48,7 +49,8 @@ func buildApp(t *testing.T) *fiber.App {
 		Limiter:         auth.NewLoginLimiter(fc, auth.DefaultLimiterConfig()),
 		Clock:           fc,
 		SiteDefaultPass: "sitedefault",
-		ContentDir:      t.TempDir(),
+		ContentDir:      root + "/uploads",
+		MediaDir:        root + "/media",
 	})
 	return app
 }
@@ -438,4 +440,89 @@ func TestServer_ProtectedArticle_UnlockFlow(t *testing.T) {
 	require.Equal(t, http.StatusOK, view.StatusCode)
 	viewBody, _ := io.ReadAll(view.Body)
 	require.Contains(t, string(viewBody), "hidden")
+}
+
+func TestServer_MediaUploadAndServe(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+	tok := getCSRF(t, app, "/admin/new", cookies)
+
+	png := []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 1, 2, 3, 4, 5}
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	_ = mw.WriteField("_csrf", tok)
+	fw, err := mw.CreateFormFile("file", "shot.png")
+	require.NoError(t, err)
+	_, _ = fw.Write(png)
+	require.NoError(t, mw.Close())
+
+	req := httptest.NewRequest(http.MethodPost, "/admin/media", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	require.Contains(t, string(body), `"/media/`)
+	// Extract URL from JSON roughly.
+	m := regexp.MustCompile(`"url"\s*:\s*"([^"]+)"`).FindSubmatch(body)
+	require.Len(t, m, 2)
+	urlPath := string(m[1])
+
+	// Public serve (no auth).
+	get, err := do(app, http.MethodGet, urlPath, nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, get.StatusCode)
+	got, _ := io.ReadAll(get.Body)
+	require.Equal(t, png, got)
+}
+
+func TestServer_TagsRenameFlow(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+
+	// Create two articles with tags via the admin form.
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	for _, slug := range []string{"t-a", "t-b"} {
+		form := url.Values{}
+		form.Set("slug", slug)
+		form.Set("title", slug)
+		form.Set("body", "x")
+		form.Set("tags", "old, keep")
+		form.Set("status", "published")
+		form.Set("visibility", "public")
+		form.Set("_csrf", tok)
+		resp, err := do(app, http.MethodPost, "/admin/new",
+			strings.NewReader(form.Encode()), cookies)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+		tok = getCSRF(t, app, "/admin/new", cookies)
+	}
+
+	// Tags page lists them.
+	list, err := do(app, http.MethodGet, "/admin/tags", nil, cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, list.StatusCode)
+	listBody, _ := io.ReadAll(list.Body)
+	require.Contains(t, string(listBody), "old")
+	require.Contains(t, string(listBody), "keep")
+
+	// Rename old → new.
+	tok = getCSRF(t, app, "/admin/tags", cookies)
+	form := url.Values{}
+	form.Set("from", "old")
+	form.Set("to", "new")
+	form.Set("_csrf", tok)
+	ren, err := do(app, http.MethodPost, "/admin/tags/rename",
+		strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, ren.StatusCode)
+
+	list2, err := do(app, http.MethodGet, "/admin/tags", nil, cookies)
+	require.NoError(t, err)
+	body2, _ := io.ReadAll(list2.Body)
+	require.Contains(t, string(body2), "new")
+	require.NotContains(t, string(body2), ">old<")
 }

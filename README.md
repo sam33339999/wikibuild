@@ -105,8 +105,9 @@ Protected 密碼比對優先序：**文章密碼 > 全站預設密碼**。簽章
 ```
 GET  /                文章列表（分頁）
 GET  /:slug           文章內容
-GET  /tag/:tag        標籤過濾
-GET  /feed            RSS（後期）
+GET  /media/:name     上傳的圖片（貼圖／拖拉）
+GET  /tag/:tag        標籤過濾（M5）
+GET  /feed            RSS（M6）
 GET  /:slug/unlock    protected 密碼驗證頁 / 處理
 ```
 
@@ -122,7 +123,11 @@ GET  /admin/new       新增 Markdown 文章
 POST /admin/new       建立文章
 GET  /admin/upload    上傳 HTML 上版頁
 POST /admin/upload    處理上傳
-GET  /admin/:id/edit  編輯（含切換 status / visibility / password / raw_mode）
+POST /admin/media     圖片上傳（回 JSON {url,name}，編輯器貼圖／拖拉用）
+GET  /admin/tags      標籤管理（列表／計數）
+POST /admin/tags/rename  標籤重新命名
+POST /admin/tags/merge   標籤合併
+GET  /admin/:id/edit  編輯（含切換 status / visibility / password / raw_mode / pinned）
 POST /admin/:id       更新
 POST /admin/:id/delete 刪除
 GET  /admin/settings  全站設定（含預設 protected 密碼）
@@ -264,7 +269,7 @@ make cover             # 覆蓋率報告
    public / protected（密碼頁＋HMAC 簽章 cookie，全站預設＋每篇覆寫）/ private（未登入回 404）、settings 頁
 4. **M3 HTML 靜態上版**｜核心 ✅ 已完成
    上傳 `.html`（含資產）→ `content/uploads/<slug>/`、`raw_mode` 切換（套佈景／原檔直送）
-5. **M4 內容豐富化**｜創作+閱讀
+5. **M4 內容豐富化**｜創作+閱讀 ✅ 已完成
    **圖片上傳簡易版（貼圖／拖拉）**、**雙向連結 `[[wikilinks]]` → 連回連結**、**預估閱讀時間**、**標籤管理（重命名／合併）**、**置頂／精選**
 6. **M5 發現與導航**｜發現
    **全文搜尋（管理 + 讀者）**、**按日期封存**、標籤頁

@@ -5,6 +5,8 @@
 package server
 
 import (
+	"path/filepath"
+
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/gofiber/fiber/v3/middleware/csrf"
@@ -12,6 +14,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/handler"
+	"github.com/sam33339999/wikibuild/internal/media"
 	"github.com/sam33339999/wikibuild/internal/store"
 )
 
@@ -25,11 +28,28 @@ type Deps struct {
 	Clock           clock.Clock
 	SiteDefaultPass string // fallback password for protected articles without their own
 	ContentDir      string // root for html_upload article files
+	MediaDir        string // root for pasted/dragged images; empty → sibling of ContentDir
+}
+
+// mediaDir resolves the on-disk image directory: explicit MediaDir wins,
+// otherwise content/media next to content/uploads.
+func mediaDir(d Deps) string {
+	if d.MediaDir != "" {
+		return d.MediaDir
+	}
+	if d.ContentDir == "" {
+		return "content/media"
+	}
+	return filepath.Join(filepath.Dir(d.ContentDir), "media")
 }
 
 // New builds the configured Fiber app. The caller starts it with app.Listen().
 func New(d Deps) *fiber.App {
-	app := fiber.New()
+	// BodyLimit must exceed media.MaxBytes so the image handler can reject
+	// oversized uploads with a typed error rather than Fiber's generic 413.
+	app := fiber.New(fiber.Config{
+		BodyLimit: media.MaxBytes + 512*1024,
+	})
 
 	app.Use(recover.New())
 	// CSRF: double-submit token readable from header or the _csrf form field,
@@ -51,6 +71,11 @@ func New(d Deps) *fiber.App {
 	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir)
+	mediaH := handler.NewMedia(mediaDir(d))
+	tags := handler.NewTags(d.Store)
+
+	// Public media (no auth): images referenced from published markdown.
+	app.Get("/media/:name", mediaH.Serve)
 
 	// Public auth routes (no auth required).
 	app.Get("/admin/login", adminAuth.LoginPage)
@@ -70,6 +95,10 @@ func New(d Deps) *fiber.App {
 	admin.Post("/settings", settings.Save)
 	admin.Get("/upload", uploads.Form)
 	admin.Post("/upload", uploads.Submit)
+	admin.Post("/media", mediaH.Upload)
+	admin.Get("/tags", tags.List)
+	admin.Post("/tags/rename", tags.Rename)
+	admin.Post("/tags/merge", tags.Merge)
 	admin.Get("/:id/edit", articleAdmin.EditForm)
 	admin.Post("/:id", articleAdmin.Update)
 	admin.Post("/:id/delete", articleAdmin.Delete)

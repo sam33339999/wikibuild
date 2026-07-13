@@ -6,28 +6,28 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 `README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
 
-**M0 (基礎骨架 + 安全), M1 (文章核心 Markdown), M2 (可見性三態) and M3 (HTML 靜態上版) are COMPLETE.** The app builds, runs against real Postgres, supports admin login (bcrypt + HMAC session, CSRF, rate-limit), full article CRUD with Goldmark rendering (TOC + code highlighting), public paginated index/article pages, the public/protected/private visibility gate with a settings-managed default protected password, and HTML static-page uploads (zip/`.html` → `content/uploads/<slug>/`, `raw_mode` toggle).
+**M0–M4 are COMPLETE.** The app builds, runs against real Postgres, and covers admin login (bcrypt + HMAC session, CSRF, rate-limit), article CRUD with Goldmark (TOC + highlighting), public pages, visibility gate (public/protected/private), HTML static uploads, and M4 content enrichment (image paste/drag upload, `[[wikilinks]]` + backlinks, reading time, tag rename/merge, pinned).
 
-Implemented (M0 + M1):
-- `internal/model/` — domain types (`Article`, `User`), DB-agnostic
+Implemented:
+- `internal/model/` — domain types (`Article`, `User`), DB-agnostic; `Pinned` on Article
 - `internal/config/` — env loading (pure, `Load(lookup)`), 100% covered
 - `internal/clock/` — `Clock` interface (`Real` / `Fake`) for time injection
-- `internal/store/store.go` — `Repository` interface (Articles + Users) + typed errors (`ErrNotFound`, `ErrDuplicateSlug`, `ErrDuplicateUsername`, `ErrEmptySlug`, `ErrEmptyUsername`)
+- `internal/store/store.go` — `Repository` (Articles + Users + Settings + Tags) + typed errors (`ErrNotFound`, `ErrDuplicateSlug`, `ErrDuplicateUsername`, `ErrEmptySlug`, `ErrEmptyUsername`, `ErrEmptyTag`); `ListTags` / `RenameTag`
 - `internal/store/inmem/` — in-memory `Repository` for unit tests
 - `internal/store/sqlc/` — **sqlc-generated** (do not edit); regenerate with `make generate`
-- `internal/store/postgres/` — real `Repository` impl wrapping sqlc; integration-tested (17 L4 tests, testcontainers)
+- `internal/store/postgres/` — real `Repository` impl wrapping sqlc; integration-tested (testcontainers)
 - `internal/auth/` — `PasswordHasher` (bcrypt), HMAC `Signer` (session tokens), `LoginLimiter` (brute-force protection)
-- `internal/render/` — Goldmark markdown→HTML (GFM, linkify, chroma highlighting, GitHub-style heading IDs, TOC), L1 pure, ~90% covered
+- `internal/render/` — Goldmark markdown→HTML (GFM, linkify, chroma, TOC), `[[wikilinks]]`→md links, `ReadingTime`
+- `internal/media/` — image sniff/save (png/jpeg/gif/webp, 5MiB cap), safe path serving
 - `internal/gate/` — visibility decision logic (`Decide`) + protected password matching (`MatchPassword`), L2 pure
-- `internal/handler/` — Fiber handlers: `AdminAuth` (login/logout/`RequireAuth`), `ArticleAdmin` (CRUD), `Public` (index + article + unlock flow), `Settings` (default protected password), `Upload` (HTML zip/file upload); unit-tested against inmem
-- `internal/server/` — Fiber app assembly: recover + CSRF + routes (public + admin); static `/admin` routes registered before `/:slug` param (Fiber radix order matters)
-- `views/` — templ: `layout/` (shared chrome), `admin/` (login, article list, article form), `public/` (index, article)
-- `db/` — `schema.sql` (canonical, for sqlc), `migrations/` (golang-migrate), `queries/` (sqlc), `embed.go` (embeds migrations for integration tests)
-- `cmd/wikibuild/main.go` — entry point: config → pgxpool → pg repo → ensureAdmin → server → graceful shutdown
-- `compose.yaml` + `.env` mechanism (godotenv + Makefile `-include`)
-- `Makefile` — `generate`, `migrate-*`, `run`, `build`, `db-up/down/logs`, test targets all work
+- `internal/handler/` — Fiber handlers: `AdminAuth`, `ArticleAdmin`, `Public` (index + article + unlock + backlinks), `Settings`, `Upload` (HTML), `Media` (image paste upload), `Tags` (rename/merge); unit-tested against inmem
+- `internal/server/` — Fiber assembly: recover + CSRF + routes; static `/admin` routes before `/:slug`; `MediaDir` defaults to sibling of `ContentDir`
+- `views/` — templ: `layout/`, `admin/` (login, articles, upload, settings, tags), `public/` (index, article + reading time + backlinks)
+- `db/` — `schema.sql`, migrations (incl. pinned), `queries/`, `embed.go`
+- `cmd/wikibuild/main.go` — config → pgxpool → pg repo → ensureAdmin → server → graceful shutdown
+- `compose.yaml` + `.env` mechanism; `Makefile` targets all work
 
-NOT yet present (M4+): image upload, wikilinks, search/archive, RSS/sitemap, static assets/themes, dark/light theme.
+NOT yet present (M5+): full-text search UI, date archive, RSS/sitemap, scheduled publish, dark/light theme, static asset polish.
 
 ## Toolchain (must be on PATH)
 

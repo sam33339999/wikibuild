@@ -11,7 +11,12 @@ import (
 // delete. draft rows are dimmed so published work stands out.
 templ ArticleList(items []model.Article) {
 	<h1>文章列表</h1>
-	<p><a href="/admin/new">＋ 新增文章</a></p>
+	<p>
+		<a href="/admin/new">＋ 新增文章</a>
+		· <a href="/admin/upload">上傳 HTML</a>
+		· <a href="/admin/tags">標籤管理</a>
+		· <a href="/admin/settings">設定</a>
+	</p>
 	if len(items) == 0 {
 		<p>尚無文章。</p>
 	} else {
@@ -41,8 +46,10 @@ templ ArticleList(items []model.Article) {
 
 // ArticleForm renders the create/edit form. action is the POST target; a is
 // nil for "new" and populated for "edit" (pre-fills the fields).
+// Body textarea supports paste/drag image upload via /admin/media.
 templ ArticleForm(action string, a *model.Article, csrfToken string) {
 	<h1>編輯文章</h1>
+	<p><a href="/admin">← 文章列表</a></p>
 	<form method="post" action={ action }>
 		<input type="hidden" name="_csrf" value={ csrfToken }/>
 		<p>
@@ -52,7 +59,10 @@ templ ArticleForm(action string, a *model.Article, csrfToken string) {
 			<label>標題<br/><input name="title" value={ a.Title } required/></label>
 		</p>
 		<p>
-			<label>內文（Markdown）<br/><textarea name="body" rows="20" cols="80">{ a.Body }</textarea></label>
+			<label>內文（Markdown）— 可貼上或拖拉圖片<br/>
+				<textarea id="body" name="body" rows="20" cols="80">{ a.Body }</textarea>
+			</label>
+			<span id="media-status" style="display:block;color:#666;font-size:0.9em"></span>
 		</p>
 		<p>
 			<label>標籤（逗號分隔）<br/><input name="tags" value={ strings.Join(a.Tags, ", ") }/></label>
@@ -82,4 +92,78 @@ templ ArticleForm(action string, a *model.Article, csrfToken string) {
 		</p>
 		<p><button type="submit">儲存</button></p>
 	</form>
+	<script>
+	(function () {
+		var ta = document.getElementById('body');
+		var status = document.getElementById('media-status');
+		var csrf = document.querySelector('input[name="_csrf"]');
+		if (!ta || !csrf) return;
+
+		function setStatus(msg) { if (status) status.textContent = msg || ''; }
+
+		function insertAtCursor(text) {
+			var start = ta.selectionStart, end = ta.selectionEnd;
+			var val = ta.value;
+			ta.value = val.slice(0, start) + text + val.slice(end);
+			var pos = start + text.length;
+			ta.selectionStart = ta.selectionEnd = pos;
+			ta.focus();
+		}
+
+		function uploadFile(file) {
+			if (!file || !file.type || file.type.indexOf('image/') !== 0) {
+				setStatus('僅支援圖片檔');
+				return;
+			}
+			setStatus('上傳中…');
+			var fd = new FormData();
+			fd.append('file', file);
+			fd.append('_csrf', csrf.value);
+			fetch('/admin/media', {
+				method: 'POST',
+				headers: { 'X-Csrf-Token': csrf.value },
+				body: fd,
+				credentials: 'same-origin'
+			}).then(function (r) {
+				if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || r.statusText); });
+				return r.json();
+			}).then(function (j) {
+				var alt = (file.name || 'image').replace(/\.[^.]+$/, '');
+				insertAtCursor('![' + alt + '](' + j.url + ')');
+				setStatus('已插入 ' + j.url);
+			}).catch(function (e) {
+				setStatus('上傳失敗：' + (e.message || e));
+			});
+		}
+
+		ta.addEventListener('paste', function (e) {
+			var items = e.clipboardData && e.clipboardData.items;
+			if (!items) return;
+			for (var i = 0; i < items.length; i++) {
+				if (items[i].type.indexOf('image/') === 0) {
+					e.preventDefault();
+					uploadFile(items[i].getAsFile());
+					return;
+				}
+			}
+		});
+
+		ta.addEventListener('dragover', function (e) {
+			e.preventDefault();
+			ta.style.outline = '2px dashed #888';
+		});
+		ta.addEventListener('dragleave', function () {
+			ta.style.outline = '';
+		});
+		ta.addEventListener('drop', function (e) {
+			e.preventDefault();
+			ta.style.outline = '';
+			var files = e.dataTransfer && e.dataTransfer.files;
+			if (!files || !files.length) return;
+			for (var i = 0; i < files.length; i++) {
+				if (files[i].type.indexOf('image/') === 0) uploadFile(files[i]);
+			}
+		});
+	})();
+	</script>
 }

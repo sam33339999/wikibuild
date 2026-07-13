@@ -195,3 +195,71 @@ func (s *Store) SetSetting(ctx context.Context, key, value string) error {
 	s.settings[key] = value
 	return nil
 }
+
+// ListTags aggregates distinct tags across all articles, sorted by name.
+func (s *Store) ListTags(ctx context.Context) ([]store.TagCount, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	counts := make(map[string]int)
+	for _, a := range s.byID {
+		for _, t := range a.Tags {
+			if t != "" {
+				counts[t]++
+			}
+		}
+	}
+	out := make([]store.TagCount, 0, len(counts))
+	for name, n := range counts {
+		out = append(out, store.TagCount{Name: name, Count: n})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+// RenameTag renames from→to on every article that carries from. If an
+// article already has to, from is removed without introducing a duplicate.
+// from == to is a no-op returning 0.
+func (s *Store) RenameTag(ctx context.Context, from, to string) (int, error) {
+	from = strings.TrimSpace(from)
+	to = strings.TrimSpace(to)
+	if from == "" || to == "" {
+		return 0, store.ErrEmptyTag
+	}
+	if from == to {
+		return 0, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n := 0
+	for id, a := range s.byID {
+		newTags, changed := rewriteTags(a.Tags, from, to)
+		if !changed {
+			continue
+		}
+		a.Tags = newTags
+		s.byID[id] = a
+		n++
+	}
+	return n, nil
+}
+
+// rewriteTags replaces from with to and drops duplicates. Returns the new
+// slice and whether anything changed.
+func rewriteTags(tags []string, from, to string) ([]string, bool) {
+	if !containsTag(tags, from) {
+		return tags, false
+	}
+	out := make([]string, 0, len(tags))
+	seen := make(map[string]struct{}, len(tags))
+	for _, t := range tags {
+		if t == from {
+			t = to
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out, true
+}

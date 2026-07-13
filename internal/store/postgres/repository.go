@@ -7,6 +7,8 @@ package postgres
 import (
 	"context"
 	"errors"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -135,6 +137,89 @@ func (r *Repository) ListArticles(ctx context.Context, q store.ListQuery) ([]mod
 		return nil, 0, err
 	}
 	return items, int(total), nil
+}
+
+// ---------------- Tags ----------------
+
+// ListTags aggregates distinct tags across all articles (application-side so
+// inmem and pg stay behaviourally identical without a dedicated tags table).
+func (r *Repository) ListTags(ctx context.Context) ([]store.TagCount, error) {
+	items, _, err := r.ListArticles(ctx, store.ListQuery{})
+	if err != nil {
+		return nil, err
+	}
+	counts := make(map[string]int)
+	for _, a := range items {
+		for _, t := range a.Tags {
+			if t != "" {
+				counts[t]++
+			}
+		}
+	}
+	out := make([]store.TagCount, 0, len(counts))
+	for name, n := range counts {
+		out = append(out, store.TagCount{Name: name, Count: n})
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	return out, nil
+}
+
+// RenameTag renames from→to on every article that carries from. Merge-safe:
+// if an article already has to, from is dropped without a duplicate.
+func (r *Repository) RenameTag(ctx context.Context, from, to string) (int, error) {
+	from = strings.TrimSpace(from)
+	to = strings.TrimSpace(to)
+	if from == "" || to == "" {
+		return 0, store.ErrEmptyTag
+	}
+	if from == to {
+		return 0, nil
+	}
+	items, _, err := r.ListArticles(ctx, store.ListQuery{Tag: from})
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, a := range items {
+		newTags, changed := rewriteTags(a.Tags, from, to)
+		if !changed {
+			continue
+		}
+		a.Tags = newTags
+		if _, err := r.UpdateArticle(ctx, a); err != nil {
+			return n, err
+		}
+		n++
+	}
+	return n, nil
+}
+
+// rewriteTags replaces from with to and drops duplicates. Shared semantics
+// with the inmem store.
+func rewriteTags(tags []string, from, to string) ([]string, bool) {
+	hasFrom := false
+	for _, t := range tags {
+		if t == from {
+			hasFrom = true
+			break
+		}
+	}
+	if !hasFrom {
+		return tags, false
+	}
+	out := make([]string, 0, len(tags))
+	seen := make(map[string]struct{}, len(tags))
+	for _, t := range tags {
+		if t == from {
+			t = to
+		}
+		if _, ok := seen[t]; ok {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out, true
 }
 
 // ---------------- Users ----------------

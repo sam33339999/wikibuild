@@ -259,6 +259,46 @@ func TestListArticles_PinnedFirst(t *testing.T) {
 	require.Equal(t, "b", items[0].Slug)
 }
 
+func TestListTags_Aggregates(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+	a := sampleArticle("t1")
+	a.Tags = []string{"go", "wiki"}
+	_, _ = repo.CreateArticle(ctx, a)
+	b := sampleArticle("t2")
+	b.Tags = []string{"go"}
+	_, _ = repo.CreateArticle(ctx, b)
+
+	tags, err := repo.ListTags(ctx)
+	require.NoError(t, err)
+	require.Equal(t, []store.TagCount{
+		{Name: "go", Count: 2},
+		{Name: "wiki", Count: 1},
+	}, tags)
+}
+
+func TestRenameTag_MergeDedupes(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+	a := sampleArticle("m1")
+	a.Tags = []string{"from", "to", "x"}
+	_, _ = repo.CreateArticle(ctx, a)
+	b := sampleArticle("m2")
+	b.Tags = []string{"from"}
+	_, _ = repo.CreateArticle(ctx, b)
+
+	n, err := repo.RenameTag(ctx, "from", "to")
+	require.NoError(t, err)
+	require.Equal(t, 2, n)
+
+	got, err := repo.GetArticleBySlug(ctx, "m1")
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"to", "x"}, got.Tags)
+	got2, err := repo.GetArticleBySlug(ctx, "m2")
+	require.NoError(t, err)
+	require.Equal(t, []string{"to"}, got2.Tags)
+}
+
 func TestSettings_GetSetRoundTrip(t *testing.T) {
 	repo := NewTestRepo(t)
 	ctx := context.Background()
