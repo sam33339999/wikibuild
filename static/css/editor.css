@@ -40,8 +40,10 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg-elevated);
-  overflow: hidden;
+  /* Do not use overflow:hidden — it clips long code lines / IR blocks. */
+  overflow: visible;
   position: relative;
+  min-width: 0; /* grid child: allow shrink without crushing text */
 }
 
 .md-editor-host.is-loading::after {
@@ -61,6 +63,7 @@
 .md-editor-host .vditor {
   border: 0 !important;
   border-radius: 10px;
+  max-width: 100%;
 }
 
 .md-editor-host .vditor-toolbar {
@@ -71,6 +74,44 @@
 .md-editor-host .vditor,
 .md-editor-host .vditor-reset {
   color: var(--fg);
+}
+
+/*
+ * Global site `code { padding; background; }` (site.css) leaks into Vditor and
+ * breaks IR/WYSIWYG code fences and inline code (looks “truncated” / misaligned).
+ * Reset hard so only Vditor’s own theme styles apply inside the host.
+ */
+.md-editor-host code,
+.md-editor-host pre,
+.md-editor-host kbd,
+.md-editor-host samp {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
+  font-size: inherit;
+  color: inherit;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0;
+  border-radius: 0;
+  border: 0;
+  box-shadow: none;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: inherit;
+  line-height: inherit;
+}
+.md-editor-host pre {
+  overflow-x: auto;
+  max-width: 100%;
+}
+/* IR / contenteditable surfaces need room for long lines */
+.md-editor-host .vditor-ir,
+.md-editor-host .vditor-sv,
+.md-editor-host .vditor-wysiwyg,
+.md-editor-host .vditor-reset {
+  overflow-x: auto;
+  overflow-wrap: normal;
+  word-break: normal;
+  max-width: 100%;
 }
 
 #media-status {

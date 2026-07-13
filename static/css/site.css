@@ -405,10 +405,16 @@ body:has(.admin-page) .site-footer {
 }
 .admin-page .editor-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 17rem);
   gap: 1rem 1.25rem;
   align-items: start;
   margin-bottom: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+.admin-page .editor-layout > .editor-field {
+  min-width: 0; /* prevent grid blowout / clipped code in Vditor */
+  max-width: 100%;
 }
 @media (max-width: 900px) {
   .admin-page .editor-layout {

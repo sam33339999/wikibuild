@@ -143,18 +143,63 @@
     vditor.setTheme(t, t === "dark" ? "dark" : "light", t === "dark" ? "native" : "github");
   });
 
-  // Extra paste/drop on host (in case toolbar upload isn't used).
-  host.addEventListener("paste", function (e) {
-    var items = e.clipboardData && e.clipboardData.items;
-    if (!items) return;
-    for (var i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf("image/") === 0) {
-        e.preventDefault();
-        uploadFile(items[i].getAsFile());
-        return;
+  // Paste: images → media upload; multi-line / code → force plain text.
+  // Browsers often put text/html on the clipboard; Vditor IR may parse that
+  // HTML and mangle fences, indentation, and angle brackets (looks “truncated”).
+  host.addEventListener(
+    "paste",
+    function (e) {
+      var cd = e.clipboardData;
+      if (!cd) return;
+
+      var items = cd.items;
+      if (items) {
+        for (var i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image/") === 0) {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadFile(items[i].getAsFile());
+            return;
+          }
+        }
       }
-    }
-  });
+
+      var plain = cd.getData("text/plain");
+      if (!plain) return;
+
+      var types = [];
+      try {
+        types = cd.types ? Array.prototype.slice.call(cd.types) : [];
+      } catch (err) {}
+      var hasHTML = types.indexOf("text/html") >= 0;
+      var multiline = plain.indexOf("\n") >= 0;
+      var codeish =
+        plain.indexOf("```") >= 0 ||
+        plain.indexOf("\t") >= 0 ||
+        /<\/?[a-zA-Z][^>]*>/.test(plain) ||
+        (multiline && /^\s{2,}\S/m.test(plain)) ||
+        (multiline &&
+          /\b(func|package|import|const|var|def|class|return|function|public|private)\b/.test(
+            plain
+          ));
+
+      if (hasHTML && (multiline || codeish)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (vditor && typeof vditor.insertValue === "function") {
+          vditor.insertValue(plain);
+        } else if (textarea) {
+          var start = textarea.selectionStart || textarea.value.length;
+          var end = textarea.selectionEnd || start;
+          textarea.value = textarea.value.slice(0, start) + plain + textarea.value.slice(end);
+        }
+        try {
+          if (vditor && textarea) textarea.value = vditor.getValue();
+        } catch (err2) {}
+      }
+    },
+    true /* capture: before Vditor's own paste handler */
+  );
 
   function uploadFile(file) {
     if (!file || !csrfInput) {
