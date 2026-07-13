@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -23,20 +25,22 @@ import (
 // and auth.PasswordHasher so it is unit-tested against inmem with a fake
 // hasher. The protected-article password field is bcrypt-hashed on save.
 // clock stamps PublishedAt when an article first becomes published.
+// contentDir is used to remove html_upload files on delete (may be empty in tests).
 type ArticleAdmin struct {
-	repo   store.Repository
-	hasher auth.PasswordHasher
-	clock  clock.Clock
+	repo       store.Repository
+	hasher     auth.PasswordHasher
+	clock      clock.Clock
+	contentDir string
 }
 
 // NewArticleAdmin builds an ArticleAdmin backed by the given repository.
 // hasher hashes per-article protected passwords. clk may be nil (falls back
-// to clock.Real) for older call sites/tests.
-func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher, clk clock.Clock) *ArticleAdmin {
+// to clock.Real) for older call sites/tests. contentDir may be empty.
+func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher, clk clock.Clock, contentDir string) *ArticleAdmin {
 	if clk == nil {
 		clk = clock.Real{}
 	}
-	return &ArticleAdmin{repo: repo, hasher: hasher, clock: clk}
+	return &ArticleAdmin{repo: repo, hasher: hasher, clock: clk, contentDir: contentDir}
 }
 
 // List shows every article (newest first) for the admin overview.
@@ -47,7 +51,7 @@ func (h *ArticleAdmin) List(c fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	return renderPage(c, "文章列表", adminviews.ArticleList(items, q))
+	return renderPage(c, "文章列表", adminviews.ArticleList(items, q, csrf.TokenFromContext(c)))
 }
 
 // NewForm renders a blank article form.
@@ -75,6 +79,8 @@ func (h *ArticleAdmin) Create(c fiber.Ctx) error {
 }
 
 // EditForm renders the article form pre-filled for editing.
+// Markdown uses the full editor; html_upload uses a metadata-only form
+// (body is a filesystem path, not markdown).
 func (h *ArticleAdmin) EditForm(c fiber.Ctx) error {
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
@@ -87,8 +93,12 @@ func (h *ArticleAdmin) EditForm(c fiber.Ctx) error {
 		}
 		return err
 	}
-	return renderPage(c, "編輯："+a.Title, adminviews.ArticleForm(
-		"/admin/"+strconv.FormatInt(a.ID, 10), &a, csrf.TokenFromContext(c)))
+	tok := csrf.TokenFromContext(c)
+	action := "/admin/" + strconv.FormatInt(a.ID, 10)
+	if a.Type == model.ArticleTypeHTMLUpload {
+		return renderPage(c, "編輯上傳："+a.Title, adminviews.HTMLUploadEdit(action, &a, tok))
+	}
+	return renderPage(c, "編輯："+a.Title, adminviews.ArticleForm(action, &a, tok))
 }
 
 // Update applies form edits to an existing article.
@@ -105,15 +115,23 @@ func (h *ArticleAdmin) Update(c fiber.Ctx) error {
 		return err
 	}
 
-	updated := articleFromForm(c)
-	updated.ID = existing.ID
-	updated.Type = existing.Type // type is immutable in M1 (markdown; M3 adds html_upload)
-	updated.CreatedAt = existing.CreatedAt
-	// Empty password on edit means "keep current"; a non-empty value re-hashes.
-	updated.Password = keepOrHashPassword(c, h.hasher, existing.Password)
-	stampPublishedAt(&updated, &existing, h.clock.Now())
-	if err := ensurePreviewToken(&updated, &existing, c.FormValue("regen_preview") == "on"); err != nil {
-		return err
+	now := h.clock.Now()
+	var updated model.Article
+	if existing.Type == model.ArticleTypeHTMLUpload {
+		// Metadata only — never overwrite Body (entry file path) from a markdown form.
+		updated = htmlUploadFromForm(c, existing)
+		stampPublishedAt(&updated, &existing, now)
+	} else {
+		updated = articleFromForm(c)
+		updated.ID = existing.ID
+		updated.Type = existing.Type
+		updated.CreatedAt = existing.CreatedAt
+		updated.Password = keepOrHashPassword(c, h.hasher, existing.Password)
+		updated.PreviewToken = existing.PreviewToken
+		stampPublishedAt(&updated, &existing, now)
+		if err := ensurePreviewToken(&updated, &existing, c.FormValue("regen_preview") == "on"); err != nil {
+			return err
+		}
 	}
 
 	if _, err := h.repo.UpdateArticle(c.Context(), updated); err != nil {
@@ -128,15 +146,29 @@ func (h *ArticleAdmin) Update(c fiber.Ctx) error {
 			FromPath: normalizePath(existing.Slug),
 			ToPath:   normalizePath(updated.Slug),
 		})
+		// Move on-disk upload folder when html_upload slug changes.
+		if existing.Type == model.ArticleTypeHTMLUpload && h.contentDir != "" {
+			oldDir := filepath.Join(h.contentDir, existing.Slug)
+			newDir := filepath.Join(h.contentDir, updated.Slug)
+			_ = os.Rename(oldDir, newDir)
+		}
 	}
 	return c.Redirect().To("/admin")
 }
 
-// Delete removes an article.
+// Delete removes an article (and html_upload files under contentDir).
 func (h *ArticleAdmin) Delete(c fiber.Ctx) error {
 	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
 	if err != nil {
 		return c.SendStatus(http.StatusBadRequest)
+	}
+	// Load first so we can clean up upload files after DB delete.
+	existing, err := h.repo.GetArticle(c.Context(), id)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return c.SendStatus(http.StatusNotFound)
+		}
+		return err
 	}
 	if err := h.repo.DeleteArticle(c.Context(), id); err != nil {
 		if errors.Is(err, store.ErrNotFound) {
@@ -144,7 +176,24 @@ func (h *ArticleAdmin) Delete(c fiber.Ctx) error {
 		}
 		return err
 	}
+	if existing.Type == model.ArticleTypeHTMLUpload && h.contentDir != "" && existing.Slug != "" {
+		_ = os.RemoveAll(filepath.Join(h.contentDir, existing.Slug))
+	}
 	return c.Redirect().To("/admin")
+}
+
+// htmlUploadFromForm updates only metadata for html_upload articles.
+// Body (entry path), Type, Password, PreviewToken, CreatedAt are preserved.
+func htmlUploadFromForm(c fiber.Ctx, existing model.Article) model.Article {
+	a := existing
+	a.Slug = strings.Clone(strings.TrimSpace(c.FormValue("slug")))
+	a.Title = strings.Clone(strings.TrimSpace(c.FormValue("title")))
+	a.Status = model.Status(strings.Clone(c.FormValue("status")))
+	a.Visibility = model.Visibility(strings.Clone(c.FormValue("visibility")))
+	a.RawMode = c.FormValue("raw_mode") == "on"
+	a.Pinned = c.FormValue("pinned") == "on"
+	a.Tags = parseTags(c.FormValue("tags"))
+	return a
 }
 
 // articleFromForm reads the shared form fields into a model.Article. Used by

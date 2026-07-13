@@ -1,0 +1,26 @@
+package public
+
+import "github.com/sam33339999/wikibuild/internal/model"
+
+// HTMLFrame embeds an uploaded static page inside the site chrome via iframe.
+// src is the path that serves the raw document with correct <base> (e.g. /slug/~content).
+// Relative assets (slides/, css/) resolve inside the iframe, not against the outer layout.
+templ HTMLFrame(a model.Article, src string) {
+	<article class="html-frame-wrap">
+		<header class="html-frame-bar">
+			<h1>{ a.Title }</h1>
+			<p class="meta">
+				站台外框 + 內嵌完整頁面
+				· <a href={ src } target="_blank" rel="noopener">單獨開啟</a>
+				· <a href={ "/" + a.Slug + "/~content" } target="_blank" rel="noopener">全螢幕</a>
+			</p>
+		</header>
+		<iframe
+			class="html-frame"
+			src={ src }
+			title={ a.Title }
+			loading="lazy"
+			referrerpolicy="same-origin"
+		></iframe>
+	</article>
+}

@@ -40,6 +40,7 @@ func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fak
 	app.Get("/preview/:token", h.Preview)
 	app.Get("/:slug/unlock", h.UnlockForm)
 	app.Post("/:slug/unlock", h.UnlockSubmit)
+	app.Get("/:slug/~content", h.UploadContent)
 	app.Get("/:slug", h.Article)
 	app.Get("/:slug/*", h.UploadAsset)
 	return app, repo, signer, fc, dir
@@ -312,34 +313,37 @@ func TestPublic_HtmlUpload_ServesAssets(t *testing.T) {
 	require.Equal(t, "body{color:red}", string(body))
 }
 
-func TestPublic_HtmlUpload_InjectedIntoLayout(t *testing.T) {
+func TestPublic_HtmlUpload_NonRaw_UsesIframeShell(t *testing.T) {
 	app, repo, _, _, dir := publicApp(t)
-	content := "<p>injected content</p>"
+	content := "<!doctype html><html><head><title>X</title></head><body><p>deck</p></body></html>"
 	seedHTMLUpload(t, repo, dir, "inj", "Injected", content, false)
 
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/inj", nil))
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	body, _ := io.ReadAll(resp.Body)
-	// Injected: wrapped in the layout (has the article title) AND the content.
-	require.Contains(t, string(body), "Injected")
-	require.Contains(t, string(body), "injected content")
-	// Non-raw also needs base so relative assets resolve under /slug/.
-	require.Contains(t, string(body), `href="/inj/"`)
+	s := string(body)
+	// Site chrome + iframe pointing at ~content (not body-injected HTML).
+	require.Contains(t, s, "Injected")
+	require.Contains(t, s, `class="html-frame"`)
+	require.Contains(t, s, `src="/inj/~content"`)
+	require.Contains(t, s, "site-header")
+	// Outer page must NOT set <base> or site nav would break.
+	require.NotContains(t, s, `<base href="/inj/">`)
 }
 
-func TestPublic_HtmlUpload_Injected_ExtractsBodyAndBase(t *testing.T) {
+func TestPublic_HtmlUpload_ContentEndpoint_HasBase(t *testing.T) {
 	app, repo, _, _, dir := publicApp(t)
 	full := `<!doctype html><html><head><title>X</title></head><body><p id="only">body only</p></body></html>`
 	seedHTMLUpload(t, repo, dir, "full", "Full", full, false)
 
-	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/full", nil))
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/full/~content", nil))
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	body, _ := io.ReadAll(resp.Body)
 	s := string(body)
 	require.Contains(t, s, `id="only"`)
-	require.Contains(t, s, `href="/full/"`)
-	// Should not nest a second full document shell from the upload.
-	require.NotContains(t, s, "<!doctype html><html><head><title>X</title>")
+	require.Contains(t, s, `<base href="/full/">`)
+	// Inner document only — no site chrome.
+	require.NotContains(t, s, "site-header")
 }
 
 // --- wikilinks + backlinks (M4.2) ---

@@ -24,7 +24,7 @@ import (
 func articleApp(t *testing.T) (*fiber.App, store.Repository) {
 	t.Helper()
 	repo := inmem.New()
-	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil)
+	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil, t.TempDir())
 	app := fiber.New()
 	app.Get("/admin", h.List)
 	app.Get("/admin/new", h.NewForm)
@@ -189,6 +189,69 @@ func TestArticleAdmin_Update(t *testing.T) {
 	require.Equal(t, "New Title", got.Title)
 	require.Equal(t, model.StatusPublished, got.Status)
 	require.Equal(t, []string{"updated"}, got.Tags)
+}
+
+func TestArticleAdmin_List_HasCSRFOnDelete(t *testing.T) {
+	// Full app with CSRF is covered in server tests; unit list still renders the form field name.
+	app, repo := articleApp(t)
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "x", Title: "X", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+	})
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	// Without CSRF middleware TokenFromContext may be empty, but the hidden field must exist.
+	require.Contains(t, string(body), `name="_csrf"`)
+	require.Contains(t, string(body), `/delete`)
+	require.Contains(t, string(body), "Markdown")
+}
+
+func TestArticleAdmin_EditHTMLUpload_UsesMetaForm(t *testing.T) {
+	app, repo := articleApp(t)
+	a, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "up", Title: "Upload", Body: "index.html",
+		Type: model.ArticleTypeHTMLUpload, Status: model.StatusPublished,
+		Visibility: model.VisibilityPublic, RawMode: true,
+	})
+	require.NoError(t, err)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin/"+strconv.FormatInt(a.ID, 10)+"/edit", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "編輯 HTML 上傳")
+	require.Contains(t, s, "raw_mode")
+	require.Contains(t, s, "index.html")
+	// Must not mount markdown Vditor for html_upload.
+	require.NotContains(t, s, `data-editor="vditor"`)
+}
+
+func TestArticleAdmin_UpdateHTMLUpload_PreservesBody(t *testing.T) {
+	app, repo := articleApp(t)
+	a, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "keep-body", Title: "Old", Body: "index.html",
+		Type: model.ArticleTypeHTMLUpload, Status: model.StatusPublished,
+		Visibility: model.VisibilityPublic, RawMode: true,
+	})
+	require.NoError(t, err)
+
+	f := url.Values{}
+	f.Set("slug", "keep-body")
+	f.Set("title", "New Title")
+	f.Set("status", "published")
+	f.Set("visibility", "public")
+	// raw_mode off
+	resp := postArticle(app, "/admin/"+strconv.FormatInt(a.ID, 10), f)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+
+	got, err := repo.GetArticle(context.Background(), a.ID)
+	require.NoError(t, err)
+	require.Equal(t, "New Title", got.Title)
+	require.Equal(t, "index.html", got.Body, "entry path must not be overwritten")
+	require.False(t, got.RawMode)
+	require.Equal(t, model.ArticleTypeHTMLUpload, got.Type)
 }
 
 func TestArticleAdmin_Delete(t *testing.T) {

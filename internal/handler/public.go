@@ -160,8 +160,8 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 }
 
 // renderArticle serves an allowed article. Markdown is rendered to HTML with a
-// TOC; html_upload reads the stored file and either serves it raw (raw_mode)
-// or injects it into the layout.
+// TOC; html_upload is either raw (full page) or framed in an iframe under the
+// site chrome so relative paths and the upload's own CSS still work.
 func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 	comments := h.commentConfig(c)
 	desc := feedSummary(a.Body)
@@ -179,27 +179,53 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 			a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a), comments), pageSEO)
 	}
 
+	// raw_mode: original document only (no site header). Relative assets still
+	// need <base href="/slug/"> + GET /:slug/*.
+	if a.RawMode {
+		return h.serveUploadDocument(c, a)
+	}
+	// Keep site chrome; show the full upload inside an iframe pointed at
+	// /:slug/~content so slides/css resolve inside the frame, not the outer page.
+	// Do NOT set layout BaseHref — that would break site nav links.
+	src := "/" + a.Slug + "/~content"
+	return renderPageSEO(c, a.Title, publicviews.HTMLFrame(a, src), pageSEO)
+}
+
+// UploadContent serves the raw html_upload document (with <base>) for iframe
+// embedding. Path: GET /:slug/~content
+func (h *Public) UploadContent(c fiber.Ctx) error {
+	a, err := h.repo.GetArticleBySlug(c.Context(), c.Params("slug"))
+	if err != nil {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	if a.Type != model.ArticleTypeHTMLUpload {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	decision := gate.Decide(gate.AccessInput{
+		Status:     a.Status,
+		Visibility: a.Visibility,
+		IsAdmin:    h.isAdmin(c),
+		Unlocked:   h.isUnlocked(c, a.ID),
+	})
+	if decision != gate.Allow {
+		return c.SendStatus(http.StatusNotFound)
+	}
+	return h.serveUploadDocument(c, a)
+}
+
+// serveUploadDocument reads the entry HTML and returns it with a <base> tag so
+// relative URLs resolve under /:slug/.
+func (h *Public) serveUploadDocument(c fiber.Ctx, a model.Article) error {
 	data, err := readUploadFile(h.contentDir, a.Slug, a.Body)
 	if err != nil {
-		// Missing entry file: usually a zip that nested a folder and left
-		// Body=index.html pointing at a non-existent path.
 		if os.IsNotExist(err) {
 			return c.Status(http.StatusNotFound).SendString(
 				"upload entry file missing (re-upload the zip after the nested-folder fix)")
 		}
 		return err
 	}
-	// Relative paths (slides/x.html, css/a.css) always need a base under /slug/.
 	base := "/" + a.Slug + "/"
-	if a.RawMode {
-		// Full document, no site chrome — still inject <base> for relative assets.
-		return c.Type("html").Send(ensureBaseHref(data, base))
-	}
-	// Theme wrap: extract <body> when the upload is a full document, and set
-	// layout <base> so relative links still hit /:slug/* assets.
-	pageSEO.BaseHref = base
-	inner := extractHTMLBody(data)
-	return renderPageSEO(c, a.Title, publicviews.Article(a, inner, nil, 0, nil, comments), pageSEO)
+	return c.Type("html").Send(ensureBaseHref(data, base))
 }
 
 // UploadAsset serves a file under contentDir/<slug>/ for html_upload articles.
@@ -268,26 +294,6 @@ func ensureBaseHref(html []byte, href string) []byte {
 	}
 	// Fallback: prepend
 	return append(tag, html...)
-}
-
-// extractHTMLBody returns the inner HTML of <body> when present; otherwise the
-// original bytes as a string. Used when wrapping uploads in the site layout.
-func extractHTMLBody(html []byte) string {
-	lower := bytes.ToLower(html)
-	start := bytes.Index(lower, []byte("<body"))
-	if start < 0 {
-		return string(html)
-	}
-	gt := bytes.IndexByte(html[start:], '>')
-	if gt < 0 {
-		return string(html)
-	}
-	innerStart := start + gt + 1
-	end := bytes.Index(lower[innerStart:], []byte("</body>"))
-	if end < 0 {
-		return string(html[innerStart:])
-	}
-	return string(html[innerStart : innerStart+end])
 }
 
 func (h *Public) commentConfig(c fiber.Ctx) publicviews.CommentConfig {

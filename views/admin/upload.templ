@@ -7,8 +7,7 @@ package admin
 templ Upload(csrfToken string) {
 	<h1>上傳 HTML</h1>
 	<p class="meta">
-		適用完整靜態頁／簡報 zip。有相對路徑（例如 <code>slides/01.html</code>、<code>css/style.css</code>）時請開
-		<strong>raw_mode</strong>，否則路徑會指錯。
+		適用完整靜態頁／簡報 zip（可含 <code>slides/</code>、<code>css/</code> 等相對路徑）。
 	</p>
 	<form method="post" action="/admin/upload" enctype="multipart/form-data">
 		<input type="hidden" name="_csrf" value={ csrfToken }/>
@@ -35,12 +34,13 @@ templ Upload(csrfToken string) {
 		<p>
 			<label>
 				<input name="raw_mode" type="checkbox" checked/>
-				<strong>raw_mode</strong>：原檔直送（不套站台佈景）— <em>zip 多頁／有資產時建議開啟</em>
+				<strong>raw_mode</strong>：原檔全螢幕直送（沒有站台頂欄）
 			</label>
 		</p>
 		<p class="meta">
-			關閉 raw_mode 時會把內容塞進站台版型；仍會設定
-			<code>&lt;base href="/slug/"&gt;</code> 以修正相對路徑，但完整簡報／自訂 CSS 通常仍建議 raw_mode。
+			<strong>關 raw_mode</strong>：保留站台導覽／主題，內容用
+			<strong>iframe 框</strong>載入完整頁（相對路徑仍正常）。
+			<strong>開 raw_mode</strong>：只有你的 HTML，適合投影／全螢幕簡報。
 		</p>
 		<p><button type="submit">上傳</button></p>
 	</form>

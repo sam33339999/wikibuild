@@ -81,7 +81,7 @@ func New(d Deps) *fiber.App {
 		Limiter: d.Limiter,
 		Clock:   d.Clock,
 	})
-	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock)
+	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock, d.ContentDir)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir)
 	mediaH := handler.NewMedia(mediaDir(d))
@@ -139,9 +139,10 @@ func New(d Deps) *fiber.App {
 	app.Get("/archive/:year/:month", pub.ArchiveMonth)
 	app.Get("/tag/:tag", pub.Tag)
 	app.Get("/preview/:token", pub.Preview)
-	// Unlock before the wildcard asset route.
+	// Unlock / embed content before the wildcard asset route.
 	app.Get("/:slug/unlock", pub.UnlockForm)
 	app.Post("/:slug/unlock", pub.UnlockSubmit)
+	app.Get("/:slug/~content", pub.UploadContent) // raw HTML for iframe (non-raw_mode shell)
 	// Article entry + static assets for html_upload (relative css/slides/…).
 	app.Get("/:slug", pub.Article)
 	app.Get("/:slug/*", pub.UploadAsset)
