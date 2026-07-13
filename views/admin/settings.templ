@@ -1,0 +1,16 @@
+package admin
+
+// Settings renders the site settings form. current is the stored default
+// protected password (empty means the env fallback is in effect).
+templ Settings(current string, csrfToken string) {
+	<h1>設定</h1>
+	<form method="post" action="/admin/settings">
+		<input type="hidden" name="_csrf" value={ csrfToken }/>
+		<p>
+			<label>全站預設 protected 密碼（留空則使用環境變數 WIKIBUILD_DEFAULT_PROTECTED_PASS）<br/>
+				<input name="default_protected_password" type="password" value={ current } autocomplete="off"/>
+			</label>
+		</p>
+		<p><button type="submit">儲存</button></p>
+	</form>
+}

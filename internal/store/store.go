@@ -27,6 +27,11 @@ type Repository interface {
 	// Users
 	CreateUser(ctx context.Context, u model.User) (model.User, error)
 	GetUserByUsername(ctx context.Context, username string) (model.User, error)
+
+	// Settings (key-value, e.g. default protected password). GetSetting
+	// returns "" with a nil error when the key is unset.
+	GetSetting(ctx context.Context, key string) (string, error)
+	SetSetting(ctx context.Context, key, value string) error
 }
 
 type ListQuery struct {

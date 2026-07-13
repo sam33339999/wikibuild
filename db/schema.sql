@@ -27,3 +27,9 @@ CREATE TABLE articles (
 CREATE INDEX articles_status_idx     ON articles (status);
 CREATE INDEX articles_published_idx  ON articles (published_at DESC);
 CREATE INDEX articles_tags_idx       ON articles USING GIN (tags);
+
+CREATE TABLE settings (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL DEFAULT '',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

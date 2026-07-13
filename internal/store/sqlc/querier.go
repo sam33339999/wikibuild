@@ -15,10 +15,13 @@ type Querier interface {
 	DeleteArticle(ctx context.Context, id int64) error
 	GetArticle(ctx context.Context, id int64) (Article, error)
 	GetArticleBySlug(ctx context.Context, slug string) (Article, error)
+	GetSetting(ctx context.Context, key string) (string, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	// Optional filters: pass NULL (Valid=false) to skip status/visibility/tag,
 	// pass '' search to skip full-text search. limit=0 means "no limit".
 	ListArticles(ctx context.Context, arg ListArticlesParams) ([]Article, error)
+	// Upsert: insert the key or update its value if it already exists.
+	SetSetting(ctx context.Context, arg SetSettingParams) (string, error)
 	UpdateArticle(ctx context.Context, arg UpdateArticleParams) (Article, error)
 }
 

@@ -48,6 +48,7 @@ func New(d Deps) *fiber.App {
 		Clock:   d.Clock,
 	})
 	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher)
+	settings := handler.NewSettings(d.Store)
 
 	// Public auth routes (no auth required).
 	app.Get("/admin/login", adminAuth.LoginPage)
@@ -59,8 +60,12 @@ func New(d Deps) *fiber.App {
 	// over the public "/:slug" parameter route; sub-routes use the group.
 	app.Get("/admin", adminAuth.RequireAuth, articleAdmin.List)
 	admin := app.Group("/admin", adminAuth.RequireAuth)
+	// Static sub-routes first so they win over the /:id parameter route
+	// (Fiber radix matches by registration order at the same depth).
 	admin.Get("/new", articleAdmin.NewForm)
 	admin.Post("/new", articleAdmin.Create)
+	admin.Get("/settings", settings.Form)
+	admin.Post("/settings", settings.Save)
 	admin.Get("/:id/edit", articleAdmin.EditForm)
 	admin.Post("/:id", articleAdmin.Update)
 	admin.Post("/:id/delete", articleAdmin.Delete)

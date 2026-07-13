@@ -18,6 +18,8 @@ type Store struct {
 	nextUserID  int64
 	usersByID   map[int64]model.User
 	usersByName map[string]int64
+
+	settings map[string]string
 }
 
 func New() *Store {
@@ -159,4 +161,20 @@ func (s *Store) GetUserByUsername(ctx context.Context, username string) (model.U
 		return model.User{}, store.ErrNotFound
 	}
 	return s.usersByID[id], nil
+}
+
+func (s *Store) GetSetting(ctx context.Context, key string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.settings[key], nil
+}
+
+func (s *Store) SetSetting(ctx context.Context, key, value string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.settings == nil {
+		s.settings = make(map[string]string)
+	}
+	s.settings[key] = value
+	return nil
 }

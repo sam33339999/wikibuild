@@ -58,6 +58,20 @@ func TestCreateArticle_EmptySlug(t *testing.T) {
 	require.ErrorIs(t, err, store.ErrEmptySlug)
 }
 
+func TestCreateArticle_NilTags(t *testing.T) {
+	// The tags column is NOT NULL; nil tags must be stored as '{}' not NULL.
+	repo := NewTestRepo(t)
+	a := sampleArticle("no-tags")
+	a.Tags = nil
+	created, err := repo.CreateArticle(context.Background(), a)
+	require.NoError(t, err)
+	require.Empty(t, created.Tags)
+
+	got, err := repo.GetArticle(context.Background(), created.ID)
+	require.NoError(t, err)
+	require.NotNil(t, got.Tags)
+}
+
 func TestGetArticle_NotFound(t *testing.T) {
 	repo := NewTestRepo(t)
 	_, err := repo.GetArticle(context.Background(), 99999)
@@ -211,4 +225,26 @@ func TestCreateUser_EmptyUsername(t *testing.T) {
 
 func TestRepository_SatisfiesInterface(t *testing.T) {
 	var _ store.Repository = (*Repository)(nil)
+}
+
+func TestSettings_GetSetRoundTrip(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+
+	// Unset key returns "".
+	got, err := repo.GetSetting(ctx, "default_protected_password")
+	require.NoError(t, err)
+	require.Empty(t, got)
+
+	// Set then get.
+	require.NoError(t, repo.SetSetting(ctx, "default_protected_password", "sitedefault"))
+	got, err = repo.GetSetting(ctx, "default_protected_password")
+	require.NoError(t, err)
+	require.Equal(t, "sitedefault", got)
+
+	// Upsert updates an existing key.
+	require.NoError(t, repo.SetSetting(ctx, "default_protected_password", "newdefault"))
+	got, err = repo.GetSetting(ctx, "default_protected_password")
+	require.NoError(t, err)
+	require.Equal(t, "newdefault", got)
 }

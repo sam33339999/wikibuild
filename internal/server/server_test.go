@@ -213,6 +213,53 @@ func TestServer_ArticleCRUD_RequiresAuth(t *testing.T) {
 	}
 }
 
+func TestServer_SettingsPage_UpdatesDefaultPassword(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+
+	// GET the settings form.
+	formResp, err := do(app, http.MethodGet, "/admin/settings", nil, cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, formResp.StatusCode)
+	formBody, _ := io.ReadAll(formResp.Body)
+	m := regexp.MustCompile(`name="_csrf" value="([^"]+)"`).FindSubmatch(formBody)
+	require.Len(t, m, 2)
+
+	// Save a new default protected password.
+	form := url.Values{}
+	form.Set("default_protected_password", "newsitedefault")
+	form.Set("_csrf", string(m[1]))
+	save, err := do(app, http.MethodPost, "/admin/settings",
+		strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, save.StatusCode)
+	require.Equal(t, "/admin/settings", save.Header.Get("Location"))
+
+	// A protected article with no per-article password now unlocks with the
+	// new site default. Create one, then unlock.
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	artForm := url.Values{}
+	artForm.Set("slug", "prot")
+	artForm.Set("title", "Prot")
+	artForm.Set("body", "secret body")
+	artForm.Set("status", "published")
+	artForm.Set("visibility", "protected")
+	artForm.Set("_csrf", tok)
+	do(app, http.MethodPost, "/admin/new", strings.NewReader(artForm.Encode()), cookies)
+
+	// Unlock with the NEW site default.
+	unlockForm, _ := do(app, http.MethodGet, "/prot/unlock", nil, nil)
+	ub, _ := io.ReadAll(unlockForm.Body)
+	um := regexp.MustCompile(`name="_csrf" value="([^"]+)"`).FindSubmatch(ub)
+	postForm := url.Values{}
+	postForm.Set("password", "newsitedefault")
+	postForm.Set("_csrf", string(um[1]))
+	submit, err := do(app, http.MethodPost, "/prot/unlock",
+		strings.NewReader(postForm.Encode()), unlockForm.Cookies())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, submit.StatusCode, "new site default must unlock")
+}
+
 func TestServer_PublicPages_RenderArticle(t *testing.T) {
 	app := buildApp(t)
 	cookies := loginSession(t, app)

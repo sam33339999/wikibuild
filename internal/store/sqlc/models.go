@@ -24,6 +24,12 @@ type Article struct {
 	PublishedAt pgtype.Timestamptz
 }
 
+type Setting struct {
+	Key       string
+	Value     string
+	UpdatedAt pgtype.Timestamptz
+}
+
 type User struct {
 	ID           int64
 	Username     string

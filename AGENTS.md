@@ -6,7 +6,7 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 `README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
 
-**M0 (基礎骨架 + 安全) and M1 (文章核心 Markdown) are COMPLETE.** The app builds, runs against real Postgres, supports admin login (bcrypt + HMAC session, CSRF, rate-limit) and full article CRUD with Goldmark rendering (TOC + code highlighting) plus public paginated index and article pages.
+**M0 (基礎骨架 + 安全), M1 (文章核心 Markdown) and M2 (可見性三態) are COMPLETE.** The app builds, runs against real Postgres, supports admin login (bcrypt + HMAC session, CSRF, rate-limit), full article CRUD with Goldmark rendering (TOC + code highlighting), public paginated index/article pages, and the public/protected/private visibility gate with a settings-managed default protected password.
 
 Implemented (M0 + M1):
 - `internal/model/` — domain types (`Article`, `User`), DB-agnostic
@@ -18,7 +18,8 @@ Implemented (M0 + M1):
 - `internal/store/postgres/` — real `Repository` impl wrapping sqlc; integration-tested (17 L4 tests, testcontainers)
 - `internal/auth/` — `PasswordHasher` (bcrypt), HMAC `Signer` (session tokens), `LoginLimiter` (brute-force protection)
 - `internal/render/` — Goldmark markdown→HTML (GFM, linkify, chroma highlighting, GitHub-style heading IDs, TOC), L1 pure, ~90% covered
-- `internal/handler/` — Fiber handlers: `AdminAuth` (login/logout/`RequireAuth`), `ArticleAdmin` (CRUD), `Public` (index + article); unit-tested against inmem
+- `internal/gate/` — visibility decision logic (`Decide`) + protected password matching (`MatchPassword`), L2 pure
+- `internal/handler/` — Fiber handlers: `AdminAuth` (login/logout/`RequireAuth`), `ArticleAdmin` (CRUD), `Public` (index + article + unlock flow), `Settings` (default protected password); unit-tested against inmem
 - `internal/server/` — Fiber app assembly: recover + CSRF + routes (public + admin); static `/admin` routes registered before `/:slug` param (Fiber radix order matters)
 - `views/` — templ: `layout/` (shared chrome), `admin/` (login, article list, article form), `public/` (index, article)
 - `db/` — `schema.sql` (canonical, for sqlc), `migrations/` (golang-migrate), `queries/` (sqlc), `embed.go` (embeds migrations for integration tests)
@@ -26,7 +27,7 @@ Implemented (M0 + M1):
 - `compose.yaml` + `.env` mechanism (godotenv + Makefile `-include`)
 - `Makefile` — `generate`, `migrate-*`, `run`, `build`, `db-up/down/logs`, test targets all work
 
-NOT yet present (M2+): visibility gate (`internal/gate/`), settings page, HTML upload, search/archive, RSS/sitemap, static assets/themes, dark/light theme.
+NOT yet present (M3+): HTML upload, search/archive, RSS/sitemap, static assets/themes, dark/light theme.
 
 ## Toolchain (must be on PATH)
 
@@ -47,6 +48,9 @@ Handlers and logic depend **only on `store.Repository`**. Workflow:
 - Inject `clock.Clock` for anything time-related (scheduled publish, timestamps). Never call `time.Now()` directly in logic under test.
 - Assert errors with `errors.Is(err, store.ErrNotFound)`, etc.
 - `model.Article` uses `*time.Time` for nullable timestamps; the pg layer must translate to/from `pgtype` / `sql.NullTime`.
+- **Clone form values before persisting**: `c.FormValue` returns strings backed by fasthttp's reusable request buffer — storing them beyond the handler (in the DB) corrupts them on the next request. Use `strings.Clone` (see `articleFromForm`).
+- **Fiber radix route order matters**: register static routes (`/admin`, `/admin/new`, `/admin/settings`) **before** parameter routes (`/:slug`, `/:id`) at the same path depth, or the param shadows the static path.
+- The pg layer normalises nil `Tags` → `[]string{}` so the NOT NULL `tags` column gets `'{}'` not `NULL`.
 
 ## Locked tech stack — don't propose alternatives
 

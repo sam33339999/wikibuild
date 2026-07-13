@@ -20,6 +20,10 @@ const (
 	defaultPageSize = 10
 	adminCookie     = "wikibuild_admin"
 	unlockTTL       = 7 * 24 * time.Hour
+
+	// SettingDefaultProtectedPass is the settings key for the site-wide
+	// default password used by protected articles without their own.
+	SettingDefaultProtectedPass = "default_protected_password"
 )
 
 // Public serves reader-facing pages. Visibility is enforced via the gate
@@ -27,22 +31,22 @@ const (
 // the article id), private → 404 for non-admins. The Signer verifies both the
 // admin session cookie (admin bypass) and per-article unlock cookies.
 type Public struct {
-	repo            store.Repository
-	signer          *auth.Signer
-	hasher          auth.PasswordHasher
-	siteDefaultPass string
-	pageSize        int
+	repo           store.Repository
+	signer         *auth.Signer
+	hasher         auth.PasswordHasher
+	envDefaultPass string // fallback when no DB setting is set
+	pageSize       int
 }
 
-// NewPublic builds a Public handler. siteDefaultPass is the fallback password
-// for protected articles without their own (M2.3 adds a settings-managed one).
-func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordHasher, siteDefaultPass string) *Public {
+// NewPublic builds a Public handler. envDefaultPass is the fallback site-wide
+// password (from config) used when no settings-managed value exists.
+func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordHasher, envDefaultPass string) *Public {
 	return &Public{
-		repo:            repo,
-		signer:          signer,
-		hasher:          hasher,
-		siteDefaultPass: siteDefaultPass,
-		pageSize:        defaultPageSize,
+		repo:           repo,
+		signer:         signer,
+		hasher:         hasher,
+		envDefaultPass: envDefaultPass,
+		pageSize:       defaultPageSize,
 	}
 }
 
@@ -113,7 +117,7 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 	if !ok {
 		return c.SendStatus(http.StatusNotFound)
 	}
-	if !gate.MatchPassword(a, c.FormValue("password"), h.siteDefaultPass, h.hasher) {
+	if !gate.MatchPassword(a, c.FormValue("password"), h.siteDefault(c), h.hasher) {
 		return renderPage(c, "解鎖："+a.Title,
 			publicviews.Unlock(a.Slug, csrf.TokenFromContext(c), "密碼不正確"))
 	}
@@ -140,6 +144,16 @@ func (h *Public) protectedArticle(c fiber.Ctx) (model.Article, bool) {
 		return model.Article{}, false
 	}
 	return a, true
+}
+
+// siteDefault resolves the site-wide protected password: the settings-managed
+// value if set, otherwise the env fallback. Read per-unlock so settings
+// changes take effect immediately.
+func (h *Public) siteDefault(c fiber.Ctx) string {
+	if v, _ := h.repo.GetSetting(c.Context(), SettingDefaultProtectedPass); v != "" {
+		return v
+	}
+	return h.envDefaultPass
 }
 
 // isAdmin reports whether the request carries a valid admin session cookie.

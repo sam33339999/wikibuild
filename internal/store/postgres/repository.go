@@ -48,7 +48,7 @@ func (r *Repository) CreateArticle(ctx context.Context, a model.Article) (model.
 		Password:    a.Password,
 		RawMode:     a.RawMode,
 		Body:        a.Body,
-		Tags:        a.Tags,
+		Tags:        normalizeTags(a.Tags),
 		CreatedAt:   nargTime(a.CreatedAt),
 		UpdatedAt:   nargTime(a.UpdatedAt),
 		PublishedAt: toTimestamptz(a.PublishedAt),
@@ -86,7 +86,7 @@ func (r *Repository) UpdateArticle(ctx context.Context, a model.Article) (model.
 		Password:    a.Password,
 		RawMode:     a.RawMode,
 		Body:        a.Body,
-		Tags:        a.Tags,
+		Tags:        normalizeTags(a.Tags),
 		UpdatedAt:   toTimestamptz(nonZeroPtr(a.UpdatedAt)),
 		PublishedAt: toTimestamptz(a.PublishedAt),
 	})
@@ -158,6 +158,26 @@ func (r *Repository) GetUserByUsername(ctx context.Context, username string) (mo
 		return model.User{}, mapUserErr(err)
 	}
 	return userToModel(row), nil
+}
+
+// ---------------- Settings ----------------
+
+// GetSetting returns the value for key, or "" with a nil error when unset.
+func (r *Repository) GetSetting(ctx context.Context, key string) (string, error) {
+	val, err := r.q.GetSetting(ctx, key)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", nil
+		}
+		return "", err
+	}
+	return val, nil
+}
+
+// SetSetting upserts a setting value.
+func (r *Repository) SetSetting(ctx context.Context, key, value string) error {
+	_, err := r.q.SetSetting(ctx, sqlc.SetSettingParams{Key: key, Value: value})
+	return err
 }
 
 // ---------------- error mapping ----------------
@@ -249,6 +269,15 @@ func toText(s string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: s, Valid: true}
+}
+
+// normalizeTags returns a non-nil slice so pgx encodes '{}' (not NULL) for the
+// NOT NULL tags column. The model layer may carry nil for "no tags".
+func normalizeTags(tags []string) []string {
+	if tags == nil {
+		return []string{}
+	}
+	return tags
 }
 
 func fromTimestamptz(t pgtype.Timestamptz) time.Time {
