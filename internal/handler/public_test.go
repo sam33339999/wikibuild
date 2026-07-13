@@ -302,6 +302,44 @@ func TestPublic_HtmlUpload_InjectedIntoLayout(t *testing.T) {
 	require.Contains(t, string(body), "injected content")
 }
 
+// --- wikilinks + backlinks (M4.2) ---
+
+func TestPublic_WikilinkRenderedAsLink(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedArticle(t, repo, "alpha", "Alpha", "Link to [[beta]] here.", model.StatusPublished, model.VisibilityPublic)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/alpha", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	require.Contains(t, string(body), `<a href="/beta">beta</a>`)
+}
+
+func TestPublic_BacklinksListed(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	// alpha links to beta via a wikilink.
+	seedArticle(t, repo, "alpha", "Alpha Post", "See [[beta]] for more.", model.StatusPublished, model.VisibilityPublic)
+	// beta is the link target.
+	seedArticle(t, repo, "beta", "Beta Post", "Beta content.", model.StatusPublished, model.VisibilityPublic)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/beta", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	require.Contains(t, string(body), "連回此頁的文章")
+	require.Contains(t, string(body), `<a href="/alpha">Alpha Post</a>`)
+}
+
+func TestPublic_Backlinks_ExcludeSelfAndNonPublic(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	// beta self-links and a private article links to beta.
+	seedArticle(t, repo, "beta", "Beta", "Self [[beta]] link.", model.StatusPublished, model.VisibilityPublic)
+	seedArticle(t, repo, "secret", "Secret", "Links [[beta]].", model.StatusPublished, model.VisibilityPrivate)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/beta", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	require.NotContains(t, string(body), "Secret", "private backlink must not show")
+}
+
 func itoa(i int) string {
 	const digits = "0123456789"
 	if i == 0 {

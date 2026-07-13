@@ -146,7 +146,7 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 	if a.Type != model.ArticleTypeHTMLUpload {
 		html, toc := render.RenderWithTOC(a.Body)
-		return renderPage(c, a.Title, publicviews.Article(a, html, toc))
+		return renderPage(c, a.Title, publicviews.Article(a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a)))
 	}
 
 	data, err := readUploadFile(h.contentDir, a.Slug, a.Body)
@@ -158,8 +158,29 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 		// Serve the whole document as-is, no theme.
 		return c.Type("html").Send(data)
 	}
-	// Inject the uploaded HTML into the layout (no TOC for pre-built pages).
-	return renderPage(c, a.Title, publicviews.Article(a, string(data), nil))
+	// Inject the uploaded HTML into the layout (no TOC/reading time for pre-built pages).
+	return renderPage(c, a.Title, publicviews.Article(a, string(data), nil, 0, nil))
+}
+
+// backlinksFor returns published, public articles whose body wikilinks to a.
+// Markdown bodies may contain [[a.Slug]]; we search for that token and exclude
+// the article itself (self-links aren't backlinks).
+func (h *Public) backlinksFor(c fiber.Ctx, a model.Article) []model.Article {
+	items, _, err := h.repo.ListArticles(c.Context(), store.ListQuery{
+		Status:     model.StatusPublished,
+		Visibility: model.VisibilityPublic,
+		Search:     "[[" + a.Slug + "]]",
+	})
+	if err != nil {
+		return nil
+	}
+	out := items[:0]
+	for _, b := range items {
+		if b.ID != a.ID {
+			out = append(out, b)
+		}
+	}
+	return out
 }
 
 // readUploadFile reads <contentDir>/<slug>/<name> safely, refusing to escape

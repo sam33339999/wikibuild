@@ -3,6 +3,7 @@ package inmem
 import (
 	"context"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/sam33339999/wikibuild/internal/model"
@@ -111,6 +112,9 @@ func (s *Store) ListArticles(ctx context.Context, q store.ListQuery) ([]model.Ar
 		if q.Tag != "" && !containsTag(a.Tags, q.Tag) {
 			continue
 		}
+		if q.Search != "" && !matchesSearch(a, q.Search) {
+			continue
+		}
 		out = append(out, a)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].ID > out[j].ID })
@@ -135,6 +139,14 @@ func containsTag(tags []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// matchesSearch reports whether the article's title or body contains the
+// search term (case-insensitive), mirroring the pg layer's ILIKE.
+func matchesSearch(a model.Article, term string) bool {
+	needle := strings.ToLower(term)
+	return strings.Contains(strings.ToLower(a.Title), needle) ||
+		strings.Contains(strings.ToLower(a.Body), needle)
 }
 
 func (s *Store) CreateUser(ctx context.Context, u model.User) (model.User, error) {

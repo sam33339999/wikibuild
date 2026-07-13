@@ -7,14 +7,21 @@ import (
 	"github.com/sam33339999/wikibuild/internal/render"
 )
 
-// Article renders a single article: title, optional table of contents, and
-// the rendered markdown body. html is trusted (produced by our renderer which
-// escapes raw HTML), so it is inserted via templ.Raw.
-templ Article(a model.Article, html string, toc []render.Heading) {
+// Article renders a single article: title, meta (date, reading time),
+// optional table of contents, and the rendered body. html is trusted
+// (produced by our renderer which escapes raw HTML), inserted via templ.Raw.
+templ Article(a model.Article, html string, toc []render.Heading, readingMinutes int, backlinks []model.Article) {
 	<article>
 		<h1>{ a.Title }</h1>
-		if a.PublishedAt != nil {
-			<time>{ formatDate(a.PublishedAt) }</time>
+		if a.PublishedAt != nil || readingMinutes > 0 {
+			<p class="meta">
+				if a.PublishedAt != nil {
+					<time>{ formatDate(a.PublishedAt) }</time>
+				}
+				if readingMinutes > 0 {
+					<span>· { strconv.Itoa(readingMinutes) } 分鐘閱讀</span>
+				}
+			</p>
 		}
 		if len(toc) > 0 {
 			<nav class="toc">
@@ -29,5 +36,15 @@ templ Article(a model.Article, html string, toc []render.Heading) {
 			</nav>
 		}
 		<div class="content">@templ.Raw(html)</div>
+		if len(backlinks) > 0 {
+			<nav class="backlinks">
+				<h2>連回此頁的文章</h2>
+				<ul>
+					for _, b := range backlinks {
+						<li><a href={ "/" + b.Slug }>{ b.Title }</a></li>
+					}
+				</ul>
+			</nav>
+		}
 	</article>
 }

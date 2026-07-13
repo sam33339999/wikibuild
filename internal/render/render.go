@@ -59,7 +59,8 @@ func RenderWithTOC(markdown string) (string, []Heading) {
 }
 
 func renderWithTOC(markdown string) (string, []Heading) {
-	source := []byte(markdown)
+	// Translate [[wikilinks]] to markdown links before parsing.
+	source := []byte(wikilinksToMarkdown(markdown))
 	doc := md.Parser().Parse(text.NewReader(source))
 
 	toc := assignHeadingIDs(doc, source)
