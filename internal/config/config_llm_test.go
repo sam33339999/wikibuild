@@ -29,6 +29,18 @@ func TestLoad_LLMFields(t *testing.T) {
 	require.True(t, cfg.LLMEnabled())
 }
 
+func TestLoad_MCPTokenOptional(t *testing.T) {
+	cfg, err := config.Load(staticLookup(validEnv()))
+	require.NoError(t, err)
+	require.Empty(t, cfg.MCPToken)
+
+	env := validEnv()
+	env["WIKIBUILD_MCP_TOKEN"] = "secret-token"
+	cfg, err = config.Load(staticLookup(env))
+	require.NoError(t, err)
+	require.Equal(t, "secret-token", cfg.MCPToken)
+}
+
 func TestLoad_LLMEnabled_RequiresKeyAndBaseAndModel(t *testing.T) {
 	env := validEnv()
 	env["WIKIBUILD_LLM_API_KEY"] = "sk"

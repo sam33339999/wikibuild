@@ -52,6 +52,8 @@ type Config struct {
 	LLMBaseURL string
 	LLMAPIKey  string
 	LLMModel   string
+	// MCPToken gates the `wikibuild mcp` stdio server (S4). Empty → refuse to start.
+	MCPToken string
 }
 
 // LLMEnabled is true when base URL, API key, and model are all non-empty.
@@ -105,6 +107,9 @@ func Load(lookup LookupFunc) (Config, error) {
 	}
 	if v, ok := lookup("WIKIBUILD_LLM_MODEL"); ok {
 		cfg.LLMModel = strings.TrimSpace(v)
+	}
+	if v, ok := lookup("WIKIBUILD_MCP_TOKEN"); ok {
+		cfg.MCPToken = strings.TrimSpace(v)
 	}
 
 	var errs []error

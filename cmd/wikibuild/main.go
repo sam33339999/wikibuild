@@ -21,6 +21,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/config"
 	"github.com/sam33339999/wikibuild/internal/llm"
+	wbmcp "github.com/sam33339999/wikibuild/internal/mcp"
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/scheduler"
 	"github.com/sam33339999/wikibuild/internal/server"
@@ -29,18 +30,62 @@ import (
 )
 
 func main() {
+	// Subcommands before the HTTP server (stdio MCP must not log to stdout).
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		if err := runMCP(); err != nil {
+			log.Fatalf("wikibuild mcp: %v", err)
+		}
+		return
+	}
 	if err := run(); err != nil {
 		log.Fatalf("wikibuild: %v", err)
 	}
 }
 
-func run() error {
+func loadDotEnv() {
 	// Load .env if present. Existing environment variables take precedence
-	// (godotenv.Load never overwrites them), so production deploys that set
-	// real env vars are unaffected. A missing .env is not an error.
+	// (godotenv.Load never overwrites them). A missing .env is not an error.
 	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Printf("wikibuild: warning loading .env: %v", err)
 	}
+}
+
+func openRepo(cfg config.Config) (*pgxpool.Pool, store.Repository, error) {
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		return nil, nil, err
+	}
+	return pool, postgres.New(pool), nil
+}
+
+// runMCP starts the stdio MCP server (S4). Requires WIKIBUILD_MCP_TOKEN.
+// Logs go to stderr only — stdout is the MCP transport.
+func runMCP() error {
+	loadDotEnv()
+	cfg, err := config.Load(os.LookupEnv)
+	if err != nil {
+		return err
+	}
+	if err := wbmcp.ValidateToken(cfg.MCPToken); err != nil {
+		return errors.New("WIKIBUILD_MCP_TOKEN is required to run MCP (set a non-empty secret)")
+	}
+	pool, repo, err := openRepo(cfg)
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+
+	tools := wbmcp.NewTools(repo, clock.Real{})
+	return wbmcp.ServeStdio(tools)
+}
+
+func run() error {
+	loadDotEnv()
 
 	cfg, err := config.Load(os.LookupEnv)
 	if err != nil {
@@ -50,18 +95,12 @@ func run() error {
 	log.Printf("wikibuild: listening on %s", addr)
 
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, repo, err := openRepo(cfg)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 
-	// Schema must be applied out-of-band (see `make migrate-up`).
-	if err := pool.Ping(ctx); err != nil {
-		return err
-	}
-
-	repo := postgres.New(pool)
 	if err := ensureAdmin(ctx, repo, cfg.AdminUser, cfg.AdminPass); err != nil {
 		return err
 	}
