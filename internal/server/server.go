@@ -94,6 +94,11 @@ func New(d Deps) *fiber.App {
 	llmOn := llmClient.Enabled()
 	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock, d.ContentDir, llmOn)
 	aiseo := handler.NewAISEO(d.Store, llmClient, nil, d.ContentDir, mediaDir(d), d.SiteTitle)
+	modelName := ""
+	if oc, ok := llmClient.(*llm.OpenAIClient); ok {
+		modelName = oc.ModelName()
+	}
+	playground := handler.NewPlayground(llmClient, modelName)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir, d.Hasher)
 	mediaH := handler.NewMedia(mediaDir(d))
@@ -137,9 +142,11 @@ func New(d Deps) *fiber.App {
 	admin.Get("/redirects", redirects.List)
 	admin.Post("/redirects", redirects.Create)
 	admin.Post("/redirects/delete", redirects.Delete)
-	// AI SEO / related / OG + editor search API (static paths before /:id).
+	// AI SEO / related / OG / playground + editor search (static paths before /:id).
+	admin.Get("/playground", playground.Page)
 	admin.Post("/ai/seo", aiseo.Generate)
 	admin.Post("/ai/related", aiseo.SuggestRelated)
+	admin.Post("/ai/chat/stream", playground.Stream)
 	admin.Post("/:id/ai/seo", aiseo.GenerateForArticle)
 	admin.Post("/:id/ai/og", aiseo.GenerateOG)
 	admin.Get("/api/articles/search", articleAdmin.SearchJSON)

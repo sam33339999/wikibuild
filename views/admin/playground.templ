@@ -1,0 +1,50 @@
+package admin
+
+// Playground is the admin LLM chat UI (streaming markdown preview).
+// When enabled is false, shows configuration help instead of the form.
+templ Playground(enabled bool, model string, csrfToken string) {
+	<div class="admin-page playground-page">
+		<h1>LLM Playground</h1>
+		<p><a href="/admin">← 文章列表</a></p>
+		if !enabled {
+			<p class="meta">
+				尚未設定 LLM。請在 <code>.env</code> 填入
+				<code>WIKIBUILD_LLM_BASE_URL</code>、<code>WIKIBUILD_LLM_API_KEY</code>、
+				<code>WIKIBUILD_LLM_MODEL</code> 後重啟。
+			</p>
+		} else {
+			<p class="meta">
+				模型：<code>{ model }</code> · OpenAI 兼容 <code>chat/completions</code> ·
+				<strong>streaming</strong>（SSE）· 僅後台，不會寫入文章
+			</p>
+			<div class="playground-layout">
+				<div class="playground-input">
+					<label for="pg-system">System（可選）</label>
+					<textarea id="pg-system" rows="3" placeholder="你是有幫助的助理…"></textarea>
+					<label for="pg-message">Message</label>
+					<textarea id="pg-message" rows="8" placeholder="輸入問題…（Enter 送出，Shift+Enter 換行）"></textarea>
+					<p class="playground-actions">
+						<button type="button" id="pg-send" class="ai-seo-btn">送出（stream）</button>
+						<button type="button" id="pg-stop" class="ai-seo-btn" disabled>停止</button>
+						<button type="button" id="pg-clear">清除輸出</button>
+						<span id="pg-status" class="meta" aria-live="polite"></span>
+					</p>
+					<input type="hidden" name="_csrf" value={ csrfToken }/>
+				</div>
+				<div class="playground-output-wrap">
+					<div class="playground-tabs meta">
+						<span>串流輸出</span>
+						<label class="playground-raw-toggle">
+							<input type="checkbox" id="pg-show-raw"/> 顯示原始 Markdown
+						</label>
+					</div>
+					<div id="pg-output" class="playground-output content" aria-live="polite"></div>
+					<pre id="pg-raw" class="playground-raw" hidden></pre>
+				</div>
+			</div>
+			<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js" defer></script>
+			<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
+			<script src="/static/js/playground.js" defer></script>
+		}
+	</div>
+}

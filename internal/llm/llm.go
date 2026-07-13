@@ -32,10 +32,12 @@ type Message struct {
 	Content string
 }
 
-// Client generates SEO fields and related-article suggestions.
+// Client generates SEO fields, related suggestions, and optional chat streams.
 // Enabled reports whether the client has credentials to make requests.
 type Client interface {
 	Enabled() bool
 	GenerateSEO(ctx context.Context, title, body string) (SEOResult, error)
 	SuggestRelated(ctx context.Context, selection string, catalog []CatalogEntry) ([]RelatedSuggestion, error)
+	// StreamChat streams assistant text deltas (OpenAI stream:true). onDelta may be called many times.
+	StreamChat(ctx context.Context, messages []Message, onDelta func(delta string) error) error
 }

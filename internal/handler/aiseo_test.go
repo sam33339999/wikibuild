@@ -60,6 +60,10 @@ func (m *mockSEOClient) SuggestRelated(ctx context.Context, selection string, ca
 	return m.related, nil
 }
 
+func (m *mockSEOClient) StreamChat(ctx context.Context, messages []llm.Message, onDelta func(string) error) error {
+	return llm.ErrNotConfigured
+}
+
 func aiseoApp(t *testing.T, client llm.Client, contentDir, mediaDir string) (*fiber.App, store.Repository, *handler.AISEO) {
 	t.Helper()
 	repo := inmem.New()

@@ -74,5 +74,5 @@ make run               # 需本機有 sqlc/templ/migrate 時再 make generate
 
 | | |
 |--|--|
-| **現在** | **v1.1 complete**（v1.0 之上）：SEO · AI SEO（MD+HTML）· 站內搜尋 / AI 相關建議 · 自動 OG 圖 · [MCP](docs/integrations-mcp.md) |
+| **現在** | **v1.1 complete** + **LLM Playground**（SSE streaming）：SEO · AI · 搜尋/相關 · OG · MCP · 後台 `/admin/playground` |
 | **規格** | [v1.1](docs/specs/v1.1-ai-seo-mcp.md) · [CHANGELOG](docs/CHANGELOG.md) |

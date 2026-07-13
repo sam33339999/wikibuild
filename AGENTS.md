@@ -15,10 +15,10 @@ Implemented (high level):
 - `internal/model/` — `Article` (SEO fields, `ShowTOC`, `PublishAt`, `PreviewToken`, `Pinned`, …), `User`, `Redirect`
 - `internal/config/`, `clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/`, `ogimage/`, `sitebrand/`, `llm/`, `mcp/`
 - `internal/store/` — Repository + inmem + postgres(sqlc); settings, tags, redirects
-- `internal/handler/` + `internal/server/` — admin/public; AI SEO/related/OG; editor search; `/static/*`
-- `views/` — layout (SEO meta/JSON-LD), admin (SEO, AI, search, related), public (floating TOC)
+- `internal/handler/` + `internal/server/` — admin/public; AI SEO/related/OG; LLM playground stream; editor search; `/static/*`
+- `views/` — layout (SEO meta/JSON-LD), admin (SEO, AI, playground, search, related), public (floating TOC)
 - `db/migrations/` through `000006_article_seo`
-- `static/` — site.css, chroma.css, toc-sidebar.js, editor, editor-search.js, ai-seo.js, theme
+- `static/` — site.css, chroma.css, toc-sidebar.js, editor, editor-search.js, ai-seo.js, playground.js, theme
 - `cmd/wikibuild` (HTTP + `mcp` subcommand), `cmd/resetadmin`
 
 ## Toolchain (must be on PATH)

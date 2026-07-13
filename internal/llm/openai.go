@@ -46,6 +46,14 @@ func (c *OpenAIClient) Enabled() bool {
 	return c != nil && c.apiKey != "" && c.baseURL != "" && c.model != ""
 }
 
+// ModelName returns the configured model id (for UI display).
+func (c *OpenAIClient) ModelName() string {
+	if c == nil {
+		return ""
+	}
+	return c.model
+}
+
 // GenerateSEO calls chat/completions and parses a structured SEO result.
 func (c *OpenAIClient) GenerateSEO(ctx context.Context, title, body string) (SEOResult, error) {
 	if !c.Enabled() {

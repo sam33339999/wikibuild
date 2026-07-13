@@ -28,6 +28,11 @@ SEO control, AI assist, editor search, and MCP. Spec: [`specs/v1.1-ai-seo-mcp.md
 - **HTML AI SEO** — strip upload HTML to plain text for GenerateSEO
 - **Auto OG** — `internal/ogimage` 1200×630 PNG → `/media/…` via `POST /admin/:id/ai/og`
 
+### LLM Playground (streaming)
+- Admin **LLM Playground** (`/admin/playground`)
+- `POST /admin/ai/chat/stream` SSE; OpenAI-compatible `stream: true`
+- Live Markdown preview (marked + DOMPurify CDN)
+
 ## v1.0
 
 M0–M7: CRUD, visibility, MD/HTML upload, search/tags/archive, feeds/sitemap, theme, TOC, schedule/preview, etc.

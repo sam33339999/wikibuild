@@ -532,6 +532,71 @@ body:has(.admin-page) .site-footer {
   padding-left: 1.25rem;
 }
 
+/* ---- LLM Playground ---- */
+.admin-page.playground-page .playground-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 1rem 1.25rem;
+  align-items: stretch;
+  margin-top: 1rem;
+}
+@media (max-width: 900px) {
+  .admin-page.playground-page .playground-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-page.playground-page .playground-input label {
+  display: block;
+  font-weight: 600;
+  margin: 0.75rem 0 0.35rem;
+}
+.admin-page.playground-page .playground-input textarea {
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+  min-height: 4rem;
+}
+.admin-page.playground-page .playground-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+.admin-page.playground-page .playground-output-wrap {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.admin-page.playground-page .playground-tabs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.admin-page.playground-page .playground-output {
+  flex: 1;
+  min-height: 22rem;
+  max-height: min(70vh, 36rem);
+  overflow: auto;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface, var(--bg)) 94%, var(--border));
+  white-space: normal;
+}
+.admin-page.playground-page .playground-raw {
+  margin: 0;
+  max-height: 12rem;
+  overflow: auto;
+  padding: 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ---- Type ---- */
 h1, h2, h3, h4 {
   line-height: 1.25;
