@@ -46,11 +46,29 @@ func New(d Deps) *fiber.App {
 		Limiter: d.Limiter,
 		Clock:   d.Clock,
 	})
+	articleAdmin := handler.NewArticleAdmin(d.Store)
 
+	// Public auth routes (no auth required).
 	app.Get("/admin/login", adminAuth.LoginPage)
 	app.Post("/admin/login", adminAuth.LoginSubmit)
 	app.Post("/admin/logout", adminAuth.Logout)
-	app.Get("/admin", adminAuth.RequireAuth, adminAuth.Dashboard)
+
+	// Authenticated admin article CRUD. The index is registered at the exact
+	// static "/admin" path (not the group's trailing-slash "/") so it wins
+	// over the public "/:slug" parameter route; sub-routes use the group.
+	app.Get("/admin", adminAuth.RequireAuth, articleAdmin.List)
+	admin := app.Group("/admin", adminAuth.RequireAuth)
+	admin.Get("/new", articleAdmin.NewForm)
+	admin.Post("/new", articleAdmin.Create)
+	admin.Get("/:id/edit", articleAdmin.EditForm)
+	admin.Post("/:id", articleAdmin.Update)
+	admin.Post("/:id/delete", articleAdmin.Delete)
+
+	// Public reader-facing pages (registered last; static /admin routes above
+	// take priority over the /:slug parameter route).
+	pub := handler.NewPublic(d.Store)
+	app.Get("/", pub.Index)
+	app.Get("/:slug", pub.Article)
 
 	return app
 }

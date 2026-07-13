@@ -124,3 +124,122 @@ func TestServer_DashboardWithoutSession_RedirectsToLogin(t *testing.T) {
 	require.Equal(t, http.StatusFound, resp.StatusCode)
 	require.Equal(t, "/admin/login", resp.Header.Get("Location"))
 }
+
+// loginSession performs the CSRF login flow and returns cookies carrying
+// both the CSRF and session cookies for authenticated requests.
+func loginSession(t *testing.T, app *fiber.App) []*http.Cookie {
+	t.Helper()
+	tok, cookies := csrfTokenAndCookie(t, app)
+	form := url.Values{}
+	form.Set("username", "admin")
+	form.Set("password", "s3cret")
+	form.Set("_csrf", tok)
+	resp, err := do(app, http.MethodPost, "/admin/login",
+		strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+	for _, c := range resp.Cookies() {
+		if c.Name == "wikibuild_admin" {
+			cookies = append(cookies, c)
+		}
+	}
+	return cookies
+}
+
+// getCSRF refreshes the CSRF token for an authenticated session by reading
+// the new-article form (the CSRF middleware issues a fresh token per request).
+func getCSRF(t *testing.T, app *fiber.App, path string, cookies []*http.Cookie) string {
+	t.Helper()
+	resp, err := do(app, http.MethodGet, path, nil, cookies)
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	m := regexp.MustCompile(`name="_csrf" value="([^"]+)"`).FindSubmatch(body)
+	require.Len(t, m, 2, "form at %s must embed a csrf token", path)
+	// The response may also set a refreshed csrf cookie; fold it in.
+	for _, c := range resp.Cookies() {
+		if c.Name == "csrf_" {
+			cookies = append(cookies, c)
+		}
+	}
+	return string(m[1])
+}
+
+func TestServer_ArticleCRUD_FullFlow(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+
+	// Create an article via the authenticated, CSRF-protected form.
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	form := url.Values{}
+	form.Set("slug", "first-post")
+	form.Set("title", "First Post")
+	form.Set("body", "# Hello\n\nWorld.")
+	form.Set("tags", "go, web")
+	form.Set("status", "published")
+	form.Set("visibility", "public")
+	form.Set("_csrf", tok)
+	resp, err := do(app, http.MethodPost, "/admin/new",
+		strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+	editURL := resp.Header.Get("Location")
+	require.True(t, strings.HasPrefix(editURL, "/admin/") && strings.HasSuffix(editURL, "/edit"))
+
+	// The list page shows the new article.
+	list, err := do(app, http.MethodGet, "/admin", nil, cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, list.StatusCode)
+	listBody, _ := io.ReadAll(list.Body)
+	require.Contains(t, string(listBody), "First Post")
+
+	// The edit form is pre-filled.
+	edit, err := do(app, http.MethodGet, editURL, nil, cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, edit.StatusCode)
+	editBody, _ := io.ReadAll(edit.Body)
+	require.Contains(t, string(editBody), "First Post")
+	require.Contains(t, string(editBody), "# Hello")
+}
+
+func TestServer_ArticleCRUD_RequiresAuth(t *testing.T) {
+	app := buildApp(t)
+	// Without a session, every admin article route redirects to login.
+	for _, p := range []string{"/admin", "/admin/new", "/admin/1/edit"} {
+		resp, err := do(app, http.MethodGet, p, nil, nil)
+		require.NoError(t, err)
+		require.Equal(t, http.StatusFound, resp.StatusCode, p)
+		require.Equal(t, "/admin/login", resp.Header.Get("Location"))
+	}
+}
+
+func TestServer_PublicPages_RenderArticle(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+
+	// Create a published, public article via the admin form.
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	form := url.Values{}
+	form.Set("slug", "public-post")
+	form.Set("title", "Public Post")
+	form.Set("body", "# Heading\n\nSome **markdown**.")
+	form.Set("status", "published")
+	form.Set("visibility", "public")
+	form.Set("_csrf", tok)
+	_, err := do(app, http.MethodPost, "/admin/new", strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+
+	// Public index lists it.
+	idx, err := do(app, http.MethodGet, "/", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, idx.StatusCode)
+	idxBody, _ := io.ReadAll(idx.Body)
+	require.Contains(t, string(idxBody), "Public Post")
+
+	// Public article page renders the markdown.
+	art, err := do(app, http.MethodGet, "/public-post", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, art.StatusCode)
+	artBody, _ := io.ReadAll(art.Body)
+	require.Contains(t, string(artBody), "<h1")
+	require.Contains(t, string(artBody), "<strong>markdown</strong>")
+}

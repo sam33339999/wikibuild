@@ -1,0 +1,33 @@
+package public
+
+import (
+	"strconv"
+
+	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/render"
+)
+
+// Article renders a single article: title, optional table of contents, and
+// the rendered markdown body. html is trusted (produced by our renderer which
+// escapes raw HTML), so it is inserted via templ.Raw.
+templ Article(a model.Article, html string, toc []render.Heading) {
+	<article>
+		<h1>{ a.Title }</h1>
+		if a.PublishedAt != nil {
+			<time>{ formatDate(a.PublishedAt) }</time>
+		}
+		if len(toc) > 0 {
+			<nav class="toc">
+				<h2>目錄</h2>
+				<ul>
+					for _, h := range toc {
+						<li style={ "margin-left:" + strconv.Itoa((h.Level-1)*1) + "rem" }>
+							<a href={ "#" + h.ID }>{ h.Text }</a>
+						</li>
+					}
+				</ul>
+			</nav>
+		}
+		<div class="content">@templ.Raw(html)</div>
+	</article>
+}

@@ -132,9 +132,9 @@ func (h *AdminAuth) RequireAuth(c fiber.Ctx) error {
 	return c.Next()
 }
 
-// Dashboard is a minimal authenticated landing page for M0. M1 replaces it
-// with the article list.
-func (h *AdminAuth) Dashboard(c fiber.Ctx) error {
+// AdminUsername reads the authenticated admin's username from request Locals
+// (set by RequireAuth). Returns "" when not authenticated.
+func AdminUsername(c fiber.Ctx) string {
 	username, _ := c.Locals(adminKey).(string)
-	return c.Type("html").SendString("<!doctype html><p>logged in as " + username + "</p>")
+	return username
 }

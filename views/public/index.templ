@@ -1,0 +1,35 @@
+package public
+
+import (
+	"strconv"
+
+	"github.com/sam33339999/wikibuild/internal/model"
+)
+
+// Index renders the paginated article list for the homepage.
+templ Index(items []model.Article, page, totalPages int) {
+	<h1>文章</h1>
+	if len(items) == 0 {
+		<p>尚無文章。</p>
+	} else {
+		for _, a := range items {
+			<article>
+				<h2><a href={ "/" + a.Slug }>{ a.Title }</a></h2>
+				if a.PublishedAt != nil {
+					<time>{ formatDate(a.PublishedAt) }</time>
+				}
+			</article>
+		}
+		if totalPages > 1 {
+			<nav class="pagination">
+				if page > 1 {
+					<a href={ "/?page=" + strconv.Itoa(page-1) }>← 上一頁</a>
+				}
+				<span>{ strconv.Itoa(page) } / { strconv.Itoa(totalPages) }</span>
+				if page < totalPages {
+					<a href={ "/?page=" + strconv.Itoa(page+1) }>下一頁 →</a>
+				}
+			</nav>
+		}
+	}
+}

@@ -258,7 +258,7 @@ make cover             # 覆蓋率報告
 
 1. **M0 基礎骨架**｜核心+安全 ✅ 已完成
    config、PostgreSQL schema、migrations、Repository interface + pg 實作、Fiber app、templ 版型、admin 登入（bcrypt + session）、**CSRF 中介層、登入限流**、docker compose 開發 DB、`.env` 機制
-2. **M1 文章核心（Markdown）**｜核心
+2. **M1 文章核心（Markdown）**｜核心 ✅ 已完成
    後台列表／新增／編輯／刪除、Goldmark 渲染、**自動目錄（TOC）**、程式碼高亮、公開頁渲染、列表分頁、slug 唯一、status 草稿／發布
 3. **M2 可見性三態**｜核心
    public / protected（密碼頁＋HMAC 簽章 cookie，全站預設＋每篇覆寫）/ private（未登入回 404）、settings 頁

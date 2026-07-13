@@ -1,0 +1,79 @@
+package admin
+
+import (
+	"strconv"
+	"strings"
+
+	"github.com/sam33339999/wikibuild/internal/model"
+)
+
+// ArticleList renders the admin article table. Each row links to edit and
+// delete. draft rows are dimmed so published work stands out.
+templ ArticleList(items []model.Article) {
+	<h1>文章列表</h1>
+	<p><a href="/admin/new">＋ 新增文章</a></p>
+	if len(items) == 0 {
+		<p>尚無文章。</p>
+	} else {
+		<table>
+			<thead>
+				<tr><th>標題</th><th>slug</th><th>狀態</th><th>可見性</th><th></th></tr>
+			</thead>
+			<tbody>
+				for _, a := range items {
+					<tr>
+						<td>{ a.Title }</td>
+						<td><code>{ a.Slug }</code></td>
+						<td>{ string(a.Status) }</td>
+						<td>{ string(a.Visibility) }</td>
+						<td>
+							<a href={ "/admin/" + strconv.FormatInt(a.ID, 10) + "/edit" }>編輯</a>
+							<form method="post" action={ "/admin/" + strconv.FormatInt(a.ID, 10) + "/delete" } style="display:inline">
+								<button type="submit">刪除</button>
+							</form>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+// ArticleForm renders the create/edit form. action is the POST target; a is
+// nil for "new" and populated for "edit" (pre-fills the fields).
+templ ArticleForm(action string, a *model.Article, csrfToken string) {
+	<h1>編輯文章</h1>
+	<form method="post" action={ action }>
+		<input type="hidden" name="_csrf" value={ csrfToken }/>
+		<p>
+			<label>slug<br/><input name="slug" value={ a.Slug } required/></label>
+		</p>
+		<p>
+			<label>標題<br/><input name="title" value={ a.Title } required/></label>
+		</p>
+		<p>
+			<label>內文（Markdown）<br/><textarea name="body" rows="20" cols="80">{ a.Body }</textarea></label>
+		</p>
+		<p>
+			<label>標籤（逗號分隔）<br/><input name="tags" value={ strings.Join(a.Tags, ", ") }/></label>
+		</p>
+		<p>
+			<label>狀態
+				<select name="status">
+					<option value="draft" selected?={ a.Status == model.StatusDraft }>draft</option>
+					<option value="published" selected?={ a.Status == model.StatusPublished }>published</option>
+				</select>
+			</label>
+		</p>
+		<p>
+			<label>可見性
+				<select name="visibility">
+					<option value="public" selected?={ a.Visibility == model.VisibilityPublic }>public</option>
+					<option value="protected" selected?={ a.Visibility == model.VisibilityProtected }>protected</option>
+					<option value="private" selected?={ a.Visibility == model.VisibilityPrivate }>private</option>
+				</select>
+			</label>
+		</p>
+		<p><button type="submit">儲存</button></p>
+	</form>
+}

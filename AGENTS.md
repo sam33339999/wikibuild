@@ -6,9 +6,9 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 `README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
 
-**M0 (基礎骨架 + 安全) is COMPLETE.** The app builds, runs against real Postgres, and supports admin login with bcrypt + HMAC session cookie, CSRF protection, and login rate-limiting.
+**M0 (基礎骨架 + 安全) and M1 (文章核心 Markdown) are COMPLETE.** The app builds, runs against real Postgres, supports admin login (bcrypt + HMAC session, CSRF, rate-limit) and full article CRUD with Goldmark rendering (TOC + code highlighting) plus public paginated index and article pages.
 
-Implemented:
+Implemented (M0 + M1):
 - `internal/model/` — domain types (`Article`, `User`), DB-agnostic
 - `internal/config/` — env loading (pure, `Load(lookup)`), 100% covered
 - `internal/clock/` — `Clock` interface (`Real` / `Fake`) for time injection
@@ -17,14 +17,16 @@ Implemented:
 - `internal/store/sqlc/` — **sqlc-generated** (do not edit); regenerate with `make generate`
 - `internal/store/postgres/` — real `Repository` impl wrapping sqlc; integration-tested (17 L4 tests, testcontainers)
 - `internal/auth/` — `PasswordHasher` (bcrypt), HMAC `Signer` (session tokens), `LoginLimiter` (brute-force protection)
-- `internal/handler/` — Fiber handlers; `AdminAuth` (login/logout/dashboard + `RequireAuth` middleware), unit-tested against inmem + fake hasher
-- `internal/server/` — Fiber app assembly: recover + CSRF middleware (double-submit, header + `_csrf` form field), routes
-- `views/admin/login.templ` — templ login page (generated → `login_templ.go`)
+- `internal/render/` — Goldmark markdown→HTML (GFM, linkify, chroma highlighting, GitHub-style heading IDs, TOC), L1 pure, ~90% covered
+- `internal/handler/` — Fiber handlers: `AdminAuth` (login/logout/`RequireAuth`), `ArticleAdmin` (CRUD), `Public` (index + article); unit-tested against inmem
+- `internal/server/` — Fiber app assembly: recover + CSRF + routes (public + admin); static `/admin` routes registered before `/:slug` param (Fiber radix order matters)
+- `views/` — templ: `layout/` (shared chrome), `admin/` (login, article list, article form), `public/` (index, article)
 - `db/` — `schema.sql` (canonical, for sqlc), `migrations/` (golang-migrate), `queries/` (sqlc), `embed.go` (embeds migrations for integration tests)
 - `cmd/wikibuild/main.go` — entry point: config → pgxpool → pg repo → ensureAdmin → server → graceful shutdown
-- `Makefile` — `generate`, `migrate-up`/`migrate-down`/`migrate-force`, `run`, `build`, test targets all work
+- `compose.yaml` + `.env` mechanism (godotenv + Makefile `-include`)
+- `Makefile` — `generate`, `migrate-*`, `run`, `build`, `db-up/down/logs`, test targets all work
 
-NOT yet present (M1+): admin article CRUD UI, Goldmark markdown rendering, public pages, visibility gate (`internal/gate/`), HTML upload, search/archive, RSS/sitemap, static assets/themes.
+NOT yet present (M2+): visibility gate (`internal/gate/`), settings page, HTML upload, search/archive, RSS/sitemap, static assets/themes, dark/light theme.
 
 ## Toolchain (must be on PATH)
 

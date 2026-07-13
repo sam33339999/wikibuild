@@ -1,0 +1,19 @@
+// Package layout holds shared HTML chrome (doctype, head, body wrapper) used
+// by both admin and public pages. Kept minimal; per-section nav lives in the
+// pages that need it.
+package layout
+
+// Page wraps page content in the shared HTML document. title sets <title>.
+templ Page(title string, content templ.Component) {
+	<!doctype html>
+	<html lang="zh-Hant">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+		</head>
+		<body>
+			@content
+		</body>
+	</html>
+}

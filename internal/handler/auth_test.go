@@ -60,7 +60,9 @@ func buildApp(t *testing.T) (*fiber.App, *clock.Fake) {
 	app.Get("/admin/login", h.LoginPage)
 	app.Post("/admin/login", h.LoginSubmit)
 	app.Post("/admin/logout", h.Logout)
-	app.Get("/admin", h.RequireAuth, h.Dashboard)
+	app.Get("/admin", h.RequireAuth, func(c fiber.Ctx) error {
+		return c.SendString("ok " + handler.AdminUsername(c))
+	})
 	return app, fc
 }
 
@@ -147,7 +149,7 @@ func TestRequireAuth_ValidCookie_AllowsAccess(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	body, _ := io.ReadAll(resp.Body)
-	require.Contains(t, string(body), testUser)
+	require.Contains(t, string(body), "ok "+testUser)
 }
 
 func TestRequireAuth_ExpiredCookie_RedirectsToLogin(t *testing.T) {
