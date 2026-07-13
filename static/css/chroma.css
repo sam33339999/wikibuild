@@ -1,0 +1,297 @@
+/* Generated chroma token colors for WikiBuild (class prefix ch-).
+ * Light tokens: github · Dark tokens: monokai.
+ * Block background uses site --code-bg (see .content pre.ch-chroma).
+ * Regenerate: go run scripts/gen-chroma-css.go
+ */
+.content pre.ch-chroma,
+.content .ch-chroma {
+  color: var(--code-fg);
+  background: var(--code-bg) !important;
+}
+.content pre.ch-chroma code,
+.content .ch-chroma code {
+  background: transparent !important;
+  color: inherit;
+  padding: 0 !important;
+  font-size: inherit;
+}
+
+/* ---- Light ---- */
+
+html:not([data-theme="dark"]) .ch-chroma { background-color: transparent; }
+html[data-theme="light"] .ch-chroma { background-color: transparent; }
+html:not([data-theme="dark"]) .ch-chroma .ch-err { color: #a61717; background-color: transparent }
+html[data-theme="light"] .ch-chroma .ch-err { color: #a61717; background-color: transparent }
+html:not([data-theme="dark"]) .ch-chroma .ch-lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+html[data-theme="light"] .ch-chroma .ch-lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+html:not([data-theme="dark"]) .ch-chroma .ch-lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+html[data-theme="light"] .ch-chroma .ch-lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+html:not([data-theme="dark"]) .ch-chroma .ch-hl { background-color: transparent }
+html[data-theme="light"] .ch-chroma .ch-hl { background-color: transparent }
+html:not([data-theme="dark"]) .ch-chroma .ch-lnt { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html[data-theme="light"] .ch-chroma .ch-lnt { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html:not([data-theme="dark"]) .ch-chroma .ch-ln { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html[data-theme="light"] .ch-chroma .ch-ln { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html:not([data-theme="dark"]) .ch-chroma .ch-line { display: flex; }
+html[data-theme="light"] .ch-chroma .ch-line { display: flex; }
+html:not([data-theme="dark"]) .ch-chroma .ch-k { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-k { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-kc { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-kc { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-kd { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-kd { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-kn { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-kn { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-kp { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-kp { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-kr { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-kr { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-kt { color: #445588; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-kt { color: #445588; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-na { color: #008080 }
+html[data-theme="light"] .ch-chroma .ch-na { color: #008080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-nb { color: #0086b3 }
+html[data-theme="light"] .ch-chroma .ch-nb { color: #0086b3 }
+html:not([data-theme="dark"]) .ch-chroma .ch-bp { color: #999999 }
+html[data-theme="light"] .ch-chroma .ch-bp { color: #999999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-nc { color: #445588; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-nc { color: #445588; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-no { color: #008080 }
+html[data-theme="light"] .ch-chroma .ch-no { color: #008080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-nd { color: #3c5d5d; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-nd { color: #3c5d5d; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-ni { color: #800080 }
+html[data-theme="light"] .ch-chroma .ch-ni { color: #800080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-ne { color: #990000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-ne { color: #990000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-nf { color: #990000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-nf { color: #990000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-nl { color: #990000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-nl { color: #990000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-nn { color: #555555 }
+html[data-theme="light"] .ch-chroma .ch-nn { color: #555555 }
+html:not([data-theme="dark"]) .ch-chroma .ch-nt { color: #000080 }
+html[data-theme="light"] .ch-chroma .ch-nt { color: #000080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-nv { color: #008080 }
+html[data-theme="light"] .ch-chroma .ch-nv { color: #008080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-vc { color: #008080 }
+html[data-theme="light"] .ch-chroma .ch-vc { color: #008080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-vg { color: #008080 }
+html[data-theme="light"] .ch-chroma .ch-vg { color: #008080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-vi { color: #008080 }
+html[data-theme="light"] .ch-chroma .ch-vi { color: #008080 }
+html:not([data-theme="dark"]) .ch-chroma .ch-s { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-s { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sa { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-sa { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sb { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-sb { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sc { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-sc { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-dl { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-dl { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sd { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-sd { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-s2 { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-s2 { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-se { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-se { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sh { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-sh { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-si { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-si { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sx { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-sx { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-sr { color: #009926 }
+html[data-theme="light"] .ch-chroma .ch-sr { color: #009926 }
+html:not([data-theme="dark"]) .ch-chroma .ch-s1 { color: #dd1144 }
+html[data-theme="light"] .ch-chroma .ch-s1 { color: #dd1144 }
+html:not([data-theme="dark"]) .ch-chroma .ch-ss { color: #990073 }
+html[data-theme="light"] .ch-chroma .ch-ss { color: #990073 }
+html:not([data-theme="dark"]) .ch-chroma .ch-m { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-m { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-mb { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-mb { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-mf { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-mf { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-mh { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-mh { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-mi { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-mi { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-il { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-il { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-mo { color: #009999 }
+html[data-theme="light"] .ch-chroma .ch-mo { color: #009999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-o { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-o { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-ow { color: #000000; font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-ow { color: #000000; font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-c { color: #999988; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-c { color: #999988; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-ch { color: #999988; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-ch { color: #999988; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-cm { color: #999988; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-cm { color: #999988; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-c1 { color: #999988; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-c1 { color: #999988; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-cs { color: #999999; font-weight: bold; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-cs { color: #999999; font-weight: bold; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-cp { color: #999999; font-weight: bold; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-cp { color: #999999; font-weight: bold; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-cpf { color: #999999; font-weight: bold; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-cpf { color: #999999; font-weight: bold; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-gd { color: #000000; background-color: transparent }
+html[data-theme="light"] .ch-chroma .ch-gd { color: #000000; background-color: transparent }
+html:not([data-theme="dark"]) .ch-chroma .ch-ge { color: #000000; font-style: italic }
+html[data-theme="light"] .ch-chroma .ch-ge { color: #000000; font-style: italic }
+html:not([data-theme="dark"]) .ch-chroma .ch-gr { color: #aa0000 }
+html[data-theme="light"] .ch-chroma .ch-gr { color: #aa0000 }
+html:not([data-theme="dark"]) .ch-chroma .ch-gh { color: #999999 }
+html[data-theme="light"] .ch-chroma .ch-gh { color: #999999 }
+html:not([data-theme="dark"]) .ch-chroma .ch-gi { color: #000000; background-color: transparent }
+html[data-theme="light"] .ch-chroma .ch-gi { color: #000000; background-color: transparent }
+html:not([data-theme="dark"]) .ch-chroma .ch-go { color: #888888 }
+html[data-theme="light"] .ch-chroma .ch-go { color: #888888 }
+html:not([data-theme="dark"]) .ch-chroma .ch-gp { color: #555555 }
+html[data-theme="light"] .ch-chroma .ch-gp { color: #555555 }
+html:not([data-theme="dark"]) .ch-chroma .ch-gs { font-weight: bold }
+html[data-theme="light"] .ch-chroma .ch-gs { font-weight: bold }
+html:not([data-theme="dark"]) .ch-chroma .ch-gu { color: #aaaaaa }
+html[data-theme="light"] .ch-chroma .ch-gu { color: #aaaaaa }
+html:not([data-theme="dark"]) .ch-chroma .ch-gt { color: #aa0000 }
+html[data-theme="light"] .ch-chroma .ch-gt { color: #aa0000 }
+html:not([data-theme="dark"]) .ch-chroma .ch-gl { text-decoration: underline }
+html[data-theme="light"] .ch-chroma .ch-gl { text-decoration: underline }
+html:not([data-theme="dark"]) .ch-chroma .ch-w { color: #bbbbbb }
+html[data-theme="light"] .ch-chroma .ch-w { color: #bbbbbb }
+
+
+/* ---- Dark (explicit) ---- */
+
+html[data-theme="dark"] .ch-chroma { color: #f8f8f2; background-color: transparent; }
+html[data-theme="dark"] .ch-chroma .ch-err { color: #960050; background-color: transparent }
+html[data-theme="dark"] .ch-chroma .ch-lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+html[data-theme="dark"] .ch-chroma .ch-lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+html[data-theme="dark"] .ch-chroma .ch-hl { background-color: transparent }
+html[data-theme="dark"] .ch-chroma .ch-lnt { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html[data-theme="dark"] .ch-chroma .ch-ln { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html[data-theme="dark"] .ch-chroma .ch-line { display: flex; }
+html[data-theme="dark"] .ch-chroma .ch-k { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-kc { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-kd { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-kn { color: #f92672 }
+html[data-theme="dark"] .ch-chroma .ch-kp { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-kr { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-kt { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-na { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-nc { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-no { color: #66d9ef }
+html[data-theme="dark"] .ch-chroma .ch-nd { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-ne { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-nf { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-nx { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-nt { color: #f92672 }
+html[data-theme="dark"] .ch-chroma .ch-l { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-ld { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-s { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-sa { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-sb { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-sc { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-dl { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-sd { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-s2 { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-se { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-sh { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-si { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-sx { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-sr { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-s1 { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-ss { color: #e6db74 }
+html[data-theme="dark"] .ch-chroma .ch-m { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-mb { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-mf { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-mh { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-mi { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-il { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-mo { color: #ae81ff }
+html[data-theme="dark"] .ch-chroma .ch-o { color: #f92672 }
+html[data-theme="dark"] .ch-chroma .ch-ow { color: #f92672 }
+html[data-theme="dark"] .ch-chroma .ch-c { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-ch { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-cm { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-c1 { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-cs { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-cp { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-cpf { color: #75715e }
+html[data-theme="dark"] .ch-chroma .ch-gd { color: #f92672 }
+html[data-theme="dark"] .ch-chroma .ch-ge { font-style: italic }
+html[data-theme="dark"] .ch-chroma .ch-gi { color: #a6e22e }
+html[data-theme="dark"] .ch-chroma .ch-gs { font-weight: bold }
+html[data-theme="dark"] .ch-chroma .ch-gu { color: #75715e }
+
+
+/* ---- Dark (system, when theme not forced light) ---- */
+@media (prefers-color-scheme: dark) {
+
+html:not([data-theme="light"]) .ch-chroma { color: #f8f8f2; background-color: transparent; }
+html:not([data-theme="light"]) .ch-chroma .ch-err { color: #960050; background-color: transparent }
+html:not([data-theme="light"]) .ch-chroma .ch-lntd { vertical-align: top; padding: 0; margin: 0; border: 0; }
+html:not([data-theme="light"]) .ch-chroma .ch-lntable { border-spacing: 0; padding: 0; margin: 0; border: 0; }
+html:not([data-theme="light"]) .ch-chroma .ch-hl { background-color: transparent }
+html:not([data-theme="light"]) .ch-chroma .ch-lnt { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html:not([data-theme="light"]) .ch-chroma .ch-ln { white-space: pre; user-select: none; margin-right: 0.4em; padding: 0 0.4em 0 0.4em;color: #7f7f7f }
+html:not([data-theme="light"]) .ch-chroma .ch-line { display: flex; }
+html:not([data-theme="light"]) .ch-chroma .ch-k { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-kc { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-kd { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-kn { color: #f92672 }
+html:not([data-theme="light"]) .ch-chroma .ch-kp { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-kr { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-kt { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-na { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-nc { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-no { color: #66d9ef }
+html:not([data-theme="light"]) .ch-chroma .ch-nd { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-ne { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-nf { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-nx { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-nt { color: #f92672 }
+html:not([data-theme="light"]) .ch-chroma .ch-l { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-ld { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-s { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-sa { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-sb { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-sc { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-dl { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-sd { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-s2 { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-se { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-sh { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-si { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-sx { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-sr { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-s1 { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-ss { color: #e6db74 }
+html:not([data-theme="light"]) .ch-chroma .ch-m { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-mb { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-mf { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-mh { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-mi { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-il { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-mo { color: #ae81ff }
+html:not([data-theme="light"]) .ch-chroma .ch-o { color: #f92672 }
+html:not([data-theme="light"]) .ch-chroma .ch-ow { color: #f92672 }
+html:not([data-theme="light"]) .ch-chroma .ch-c { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-ch { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-cm { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-c1 { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-cs { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-cp { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-cpf { color: #75715e }
+html:not([data-theme="light"]) .ch-chroma .ch-gd { color: #f92672 }
+html:not([data-theme="light"]) .ch-chroma .ch-ge { font-style: italic }
+html:not([data-theme="light"]) .ch-chroma .ch-gi { color: #a6e22e }
+html:not([data-theme="light"]) .ch-chroma .ch-gs { font-weight: bold }
+html:not([data-theme="light"]) .ch-chroma .ch-gu { color: #75715e }
+
+}

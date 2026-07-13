@@ -962,14 +962,16 @@ p, li { color: var(--fg); }
 .content code {
   font-family: var(--font-mono);
   font-size: 0.88em;
-  color: var(--code-fg);
 }
-.content code {
+/* Inline code only — do not force color on pre/chroma (tokens need class colors). */
+.content :not(pre) > code {
+  color: var(--code-fg);
   background: var(--code-bg);
   padding: 0.12em 0.38em;
   border-radius: 5px;
 }
 .content pre {
+  color: var(--code-fg);
   background: var(--code-bg);
   padding: 1rem 1.15rem;
   border-radius: var(--radius-sm);
@@ -977,7 +979,12 @@ p, li { color: var(--fg); }
   border: 1px solid var(--border);
   line-height: 1.5;
 }
-.content pre code { background: none; padding: 0; }
+.content pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
 .content img {
   max-width: 100%;
   height: auto;
@@ -1133,7 +1140,8 @@ th {
   letter-spacing: 0.01em;
 }
 
-code {
+/* Generic inline code outside .content (admin hints, etc.). Skip inside pre/chroma. */
+:not(pre) > code {
   font-family: var(--font-mono);
   font-size: 0.9em;
   color: var(--code-fg);

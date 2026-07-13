@@ -25,10 +25,11 @@ func TestRender_GFMTable(t *testing.T) {
 func TestRender_CodeBlock_Highlighted(t *testing.T) {
 	md := "```go\nfunc main() {}\n```\n"
 	out := render.Render(md)
-	// Chroma highlights with inline color styles (M1); M7 switches to
-	// classes + theme CSS for dark/light switching.
+	// Class-based chroma (prefix ch-) so site light/dark CSS can theme tokens.
 	require.Contains(t, out, "<pre")
-	require.Contains(t, out, `style="color:`, "highlighted code should carry chroma color styles")
+	require.Contains(t, out, "ch-chroma", "fenced code should use chroma class wrapper")
+	require.Contains(t, out, "ch-", "token spans use ch- prefix classes")
+	require.NotContains(t, out, `style="color:`, "inline monokai colors clash with site --code-bg")
 }
 
 func TestRender_FencedCodeWithoutLanguage_StillPre(t *testing.T) {

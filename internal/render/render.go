@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode"
 
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/ast"
@@ -23,15 +24,22 @@ import (
 // autolinked URLs, syntax-highlighted code, and raw-HTML escaping for safety.
 // Heading IDs are assigned separately (see renderWithTOC) so the same pipeline
 // serves both Render and RenderWithTOC.
+//
+// Code highlighting uses chroma CSS classes (prefix ch-), not monokai inline
+// colors. Token colors live in static/css/chroma.css (light github / dark monokai
+// under data-theme) so they match the site --code-bg instead of clashing.
 var md = goldmark.New(
 	goldmark.WithExtensions(
 		extension.GFM,
 		extension.Linkify,
 		highlighting.NewHighlighting(
-			// Inline styles so highlighted code renders without a CSS asset
-			// in M1. M7 (深淺色主題) switches to chroma classes + a theme
-			// stylesheet for dark/light switching.
-			highlighting.WithStyle("monokai"),
+			// Style name is unused for colors when WithClasses is on; classes
+			// are theme-agnostic token kinds. Keep a valid style for fallbacks.
+			highlighting.WithStyle("github"),
+			highlighting.WithFormatOptions(
+				chromahtml.WithClasses(true),
+				chromahtml.ClassPrefix("ch-"),
+			),
 		),
 	),
 	goldmark.WithParserOptions(parser.WithAutoHeadingID()),
@@ -46,7 +54,7 @@ type Heading struct {
 }
 
 // Render converts Markdown to HTML (with heading IDs). Code is syntax
-// highlighted via chroma classes; a theme CSS is applied later (M7).
+// highlighted via chroma classes; colors come from static/css/chroma.css.
 func Render(markdown string) string {
 	htmlStr, _ := renderWithTOC(markdown)
 	return htmlStr
