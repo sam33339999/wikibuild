@@ -37,6 +37,12 @@ type Article struct {
 	ShowTOC      bool // markdown: render collapsible TOC sidebar (default true)
 	Body         string
 	Tags         []string
+	// SEO / social (empty = automatic fallbacks on public render).
+	SEOTitle        string // <title> / og:title if set; else Title
+	Summary         string // human/AI blurb; feeds prefer this
+	MetaDescription string // meta description / og:description if set
+	CoverImageURL   string // optional on-page hero / list card
+	OGImageURL      string // OG/Twitter image; falls back to CoverImageURL
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	PublishedAt  *time.Time

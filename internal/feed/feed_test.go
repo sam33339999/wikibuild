@@ -70,3 +70,11 @@ func TestFromArticles_SummaryStripsMarkdownNoise(t *testing.T) {
 	require.NotContains(t, items[0].Summary, "#")
 	require.Contains(t, items[0].Summary, "Hello")
 }
+
+func TestFromArticles_PrefersAuthorSummary(t *testing.T) {
+	items := feed.FromArticles([]model.Article{{
+		Slug: "x", Title: "T", Body: "long body text that should not appear",
+		Summary: "Author blurb", MetaDescription: "meta only",
+	}})
+	require.Equal(t, "Author blurb", items[0].Summary)
+}

@@ -30,21 +30,24 @@ const localsBrandKey = "siteBrand"
 // hasher. The protected-article password field is bcrypt-hashed on save.
 // clock stamps PublishedAt when an article first becomes published.
 // contentDir is used to remove html_upload files on delete (may be empty in tests).
+// llmEnabled toggles the admin "AI 產生 SEO" control (S2).
 type ArticleAdmin struct {
 	repo       store.Repository
 	hasher     auth.PasswordHasher
 	clock      clock.Clock
 	contentDir string
+	llmEnabled bool
 }
 
 // NewArticleAdmin builds an ArticleAdmin backed by the given repository.
 // hasher hashes per-article protected passwords. clk may be nil (falls back
 // to clock.Real) for older call sites/tests. contentDir may be empty.
-func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher, clk clock.Clock, contentDir string) *ArticleAdmin {
+// llmEnabled shows the AI SEO button when the LLM client is configured.
+func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher, clk clock.Clock, contentDir string, llmEnabled bool) *ArticleAdmin {
 	if clk == nil {
 		clk = clock.Real{}
 	}
-	return &ArticleAdmin{repo: repo, hasher: hasher, clock: clk, contentDir: contentDir}
+	return &ArticleAdmin{repo: repo, hasher: hasher, clock: clk, contentDir: contentDir, llmEnabled: llmEnabled}
 }
 
 // List shows every article (newest first) for the admin overview.
@@ -62,7 +65,7 @@ func (h *ArticleAdmin) List(c fiber.Ctx) error {
 func (h *ArticleAdmin) NewForm(c fiber.Ctx) error {
 	return renderPage(c, "新增文章", adminviews.ArticleForm("/admin/new", &model.Article{
 		Status: model.StatusDraft, Visibility: model.VisibilityPublic, ShowTOC: true,
-	}, csrf.TokenFromContext(c)))
+	}, csrf.TokenFromContext(c), h.llmEnabled))
 }
 
 // Create stores a new markdown article from the form.
@@ -100,9 +103,9 @@ func (h *ArticleAdmin) EditForm(c fiber.Ctx) error {
 	tok := csrf.TokenFromContext(c)
 	action := "/admin/" + strconv.FormatInt(a.ID, 10)
 	if a.Type == model.ArticleTypeHTMLUpload {
-		return renderPage(c, "編輯上傳："+a.Title, adminviews.HTMLUploadEdit(action, &a, tok))
+		return renderPage(c, "編輯上傳："+a.Title, adminviews.HTMLUploadEdit(action, &a, tok, h.llmEnabled))
 	}
-	return renderPage(c, "編輯："+a.Title, adminviews.ArticleForm(action, &a, tok))
+	return renderPage(c, "編輯："+a.Title, adminviews.ArticleForm(action, &a, tok, h.llmEnabled))
 }
 
 // Update applies form edits to an existing article.
@@ -199,6 +202,7 @@ func htmlUploadFromForm(c fiber.Ctx, existing model.Article, hasher auth.Passwor
 	a.Pinned = c.FormValue("pinned") == "on"
 	a.Tags = parseTags(c.FormValue("tags"))
 	a.Password = keepOrHashPassword(c, hasher, existing.Password)
+	bindSEOFields(&a, c)
 	return a
 }
 
@@ -221,12 +225,22 @@ func articleFromForm(c fiber.Ctx) model.Article {
 		Pinned:     c.FormValue("pinned") == "on",
 		ShowTOC:    c.FormValue("show_toc") == "on",
 	}
+	bindSEOFields(&a, c)
 	if raw := strings.TrimSpace(c.FormValue("publish_at")); raw != "" {
 		if t, err := parseFormTime(raw); err == nil {
 			a.PublishAt = &t
 		}
 	}
 	return a
+}
+
+// bindSEOFields copies optional SEO / social form fields (cloned for fasthttp).
+func bindSEOFields(a *model.Article, c fiber.Ctx) {
+	a.SEOTitle = strings.Clone(strings.TrimSpace(c.FormValue("seo_title")))
+	a.Summary = strings.Clone(strings.TrimSpace(c.FormValue("summary")))
+	a.MetaDescription = strings.Clone(strings.TrimSpace(c.FormValue("meta_description")))
+	a.CoverImageURL = strings.Clone(strings.TrimSpace(c.FormValue("cover_image_url")))
+	a.OGImageURL = strings.Clone(strings.TrimSpace(c.FormValue("og_image_url")))
 }
 
 // parseFormTime accepts datetime-local (2006-01-02T15:04) or RFC3339.

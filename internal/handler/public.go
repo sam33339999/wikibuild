@@ -170,11 +170,14 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 // site chrome so relative paths and the upload's own CSS still work.
 func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 	comments := h.commentConfig(c)
-	desc := feedSummary(a.Body)
+	desc := seo.EffectiveMetaDescription(a)
+	img := seo.EffectiveOGImage(a)
+	pageTitle := seo.EffectiveTitle(a)
 	pageSEO := layout.SEO{
 		Type:        "article",
 		Description: desc,
-		JSONLD:      seo.ArticleJSONLD(h.baseURL, a, desc),
+		Image:       img,
+		JSONLD:      seo.ArticleJSONLD(h.baseURL, a, desc, img),
 	}
 	if h.baseURL != "" {
 		pageSEO.Canonical = h.baseURL + "/" + a.Slug
@@ -184,7 +187,7 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 		if !a.ShowTOC {
 			toc = nil
 		}
-		return renderPageSEO(c, a.Title, publicviews.Article(
+		return renderPageSEO(c, pageTitle, publicviews.Article(
 			a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a), comments), pageSEO)
 	}
 
@@ -197,7 +200,7 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 	// /:slug/~content so slides/css resolve inside the frame, not the outer page.
 	// Do NOT set layout BaseHref — that would break site nav links.
 	src := "/" + a.Slug + "/~content"
-	return renderPageSEO(c, a.Title, publicviews.HTMLFrame(a, src), pageSEO)
+	return renderPageSEO(c, pageTitle, publicviews.HTMLFrame(a, src), pageSEO)
 }
 
 // UploadContent serves the raw html_upload document (with <base>) for iframe
@@ -314,18 +317,6 @@ func (h *Public) commentConfig(c fiber.Ctx) publicviews.CommentConfig {
 		Repo:     repo,
 		Category: cat,
 	}
-}
-
-// feedSummary reuses a short plain-text blurb for meta description.
-func feedSummary(body string) string {
-	s := strings.TrimSpace(body)
-	s = strings.ReplaceAll(s, "#", "")
-	s = strings.ReplaceAll(s, "*", "")
-	s = strings.Join(strings.Fields(s), " ")
-	if len(s) > 160 {
-		return s[:160] + "…"
-	}
-	return s
 }
 
 // backlinksFor returns published, public articles whose body wikilinks to a.

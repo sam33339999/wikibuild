@@ -20,6 +20,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/config"
+	"github.com/sam33339999/wikibuild/internal/llm"
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/scheduler"
 	"github.com/sam33339999/wikibuild/internal/server"
@@ -66,6 +67,14 @@ func run() error {
 	}
 
 	clk := clock.Real{}
+	llmClient := llm.NewOpenAIClient(llm.OpenAIConfig{
+		BaseURL: cfg.LLMBaseURL,
+		APIKey:  cfg.LLMAPIKey,
+		Model:   cfg.LLMModel,
+	})
+	if llmClient.Enabled() {
+		log.Printf("wikibuild: LLM SEO enabled (model=%s)", cfg.LLMModel)
+	}
 	app := server.New(server.Deps{
 		Store:           repo,
 		Hasher:          auth.NewPasswordHasher(),
@@ -77,6 +86,7 @@ func run() error {
 		StaticDir:       "./static",
 		BaseURL:         cfg.BaseURL,
 		SiteTitle:       cfg.SiteTitle,
+		LLM:             llmClient,
 	})
 
 	// Background publisher for scheduled drafts.

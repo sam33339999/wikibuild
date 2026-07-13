@@ -24,7 +24,7 @@ import (
 func articleApp(t *testing.T) (*fiber.App, store.Repository) {
 	t.Helper()
 	repo := inmem.New()
-	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil, t.TempDir())
+	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil, t.TempDir(), false)
 	app := fiber.New()
 	app.Get("/admin", h.List)
 	app.Get("/admin/new", h.NewForm)
@@ -135,7 +135,27 @@ func TestArticleAdmin_NewForm(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	body, _ := io.ReadAll(resp.Body)
-	require.Contains(t, string(body), "<form")
+	s := string(body)
+	require.Contains(t, s, "<form")
+	require.Contains(t, s, "SEO / 分享")
+	// Default articleApp has llmEnabled=false → disabled message, no button.
+	require.Contains(t, s, "WIKIBUILD_LLM_")
+	require.NotContains(t, s, `id="ai-seo-btn"`)
+}
+
+func TestArticleAdmin_NewForm_AIEnabledShowsButton(t *testing.T) {
+	repo := inmem.New()
+	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil, t.TempDir(), true)
+	app := fiber.New()
+	app.Get("/admin/new", h.NewForm)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin/new", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `id="ai-seo-btn"`)
+	require.Contains(t, s, "AI 產生 SEO")
+	require.Contains(t, s, "/static/js/ai-seo.js")
 }
 
 func TestArticleAdmin_EditForm_PreFilled(t *testing.T) {
@@ -190,6 +210,57 @@ func TestArticleAdmin_Update(t *testing.T) {
 	require.Equal(t, "New Title", got.Title)
 	require.Equal(t, model.StatusPublished, got.Status)
 	require.Equal(t, []string{"updated"}, got.Tags)
+}
+
+func TestArticleAdmin_Create_SEOFieldsRoundTrip(t *testing.T) {
+	app, repo := articleApp(t)
+	f := articleForm()
+	f.Set("seo_title", "SEO Hello")
+	f.Set("summary", "A short human summary.")
+	f.Set("meta_description", "Meta for search engines.")
+	f.Set("cover_image_url", "/media/cover.png")
+	f.Set("og_image_url", "/media/og.png")
+	resp := postArticle(app, "/admin/new", f)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+
+	items, _, err := repo.ListArticles(context.Background(), store.ListQuery{})
+	require.NoError(t, err)
+	require.Len(t, items, 1)
+	a := items[0]
+	require.Equal(t, "SEO Hello", a.SEOTitle)
+	require.Equal(t, "A short human summary.", a.Summary)
+	require.Equal(t, "Meta for search engines.", a.MetaDescription)
+	require.Equal(t, "/media/cover.png", a.CoverImageURL)
+	require.Equal(t, "/media/og.png", a.OGImageURL)
+
+	edit, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin/"+strconv.FormatInt(a.ID, 10)+"/edit", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(edit.Body)
+	s := string(body)
+	require.Contains(t, s, "SEO / 分享")
+	require.Contains(t, s, `name="seo_title"`)
+	require.Contains(t, s, "SEO Hello")
+	require.Contains(t, s, "Meta for search engines.")
+}
+
+func TestArticleAdmin_List_MissingDescriptionBadge(t *testing.T) {
+	app, repo := articleApp(t)
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "no-desc", Title: "No Desc", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+	})
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "has-desc", Title: "Has Desc", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+		MetaDescription: "filled",
+	})
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	// Badge appears for the article without summary/meta; not for the one with meta.
+	require.Contains(t, s, "缺 description")
+	require.Contains(t, s, "Has Desc")
 }
 
 func TestArticleAdmin_List_HasCSRFOnDelete(t *testing.T) {

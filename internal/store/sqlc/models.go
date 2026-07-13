@@ -9,23 +9,28 @@ import (
 )
 
 type Article struct {
-	ID           int64
-	Slug         string
-	Title        string
-	Type         string
-	Status       string
-	Visibility   string
-	Password     string
-	RawMode      bool
-	Pinned       bool
-	ShowToc      bool
-	Body         string
-	Tags         []string
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	PublishedAt  pgtype.Timestamptz
-	PublishAt    pgtype.Timestamptz
-	PreviewToken string
+	ID              int64
+	Slug            string
+	Title           string
+	Type            string
+	Status          string
+	Visibility      string
+	Password        string
+	RawMode         bool
+	Pinned          bool
+	ShowToc         bool
+	Body            string
+	Tags            []string
+	SeoTitle        string
+	Summary         string
+	MetaDescription string
+	CoverImageUrl   string
+	OgImageUrl      string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	PublishedAt     pgtype.Timestamptz
+	PublishAt       pgtype.Timestamptz
+	PreviewToken    string
 }
 
 type Redirect struct {

@@ -16,11 +16,11 @@ Implemented (high level):
 - `internal/store/` — Repository + inmem + postgres(sqlc); settings, tags, redirects
 - `internal/handler/` + `internal/server/` — full admin/public surface; `/static/*`
 - `views/` — layout (theme, auto SEO meta/JSON-LD), admin, public (floating TOC)
-- `db/migrations/` through `000005_show_toc`
+- `db/migrations/` through `000006_article_seo`
 - `static/` — site.css (Claude-adjacent reading UI), toc-sidebar.js, editor, theme
 - `cmd/wikibuild`, `cmd/resetadmin`
 
-**Not in admin UI yet:** per-article SEO title / meta description / OG image (auto-only). Spec: v1.1 S1.
+**S1–S2 shipped (v1.1 partial):** editable SEO fields + admin **AI 產生 SEO** (`internal/llm`, OpenAI-compatible HTTP; env `WIKIBUILD_LLM_*`). Next: S3 writing search, S4 MCP.
 
 ## Toolchain (must be on PATH)
 
@@ -32,10 +32,19 @@ go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@lates
 
 ## Architecture seam (how to add features)
 
-Handlers and logic depend **only on `store.Repository`**. Workflow:
-1. Unit test against `inmem.New()` (fast, no DB).
-2. Implement logic/handler.
-3. Integration test (`//go:build integration`) against postgres when touching SQL.
+Handlers and logic depend **only on `store.Repository`**.
+
+### TDD is required (red → green → refactor)
+
+Do **not** implement first and bolt tests on later. For each behaviour slice:
+
+1. **Red** — write a failing unit test that names the desired behaviour (prefer `inmem.New()` / fake collaborators; no live LLM / no DB).
+2. **Green** — minimal code to pass that test.
+3. **Refactor** — clean up only while tests stay green.
+4. Repeat; keep the suite green between slices.
+5. When touching SQL: add `//go:build integration` tests against postgres **after** the unit path is green (or in parallel only if the contract is already fixed by unit tests).
+
+External I/O (LLM HTTP, MCP stdio): define an **interface**, mock in unit tests, one real HTTP/stdio adapter tested with a fake transport or golden fixtures.
 
 - Inject `clock.Clock` for time; never `time.Now()` in tested logic.
 - Assert with `errors.Is(err, store.ErrNotFound)`, etc.

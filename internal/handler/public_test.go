@@ -107,6 +107,52 @@ func TestPublic_Index_Pagination(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp3.StatusCode)
 }
 
+func TestPublic_Article_SEOFieldsInHead(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	pub := time.Unix(1_700_000_000, 0)
+	_, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "seo-post", Title: "Display Title", Body: "# Body that should not be the meta",
+		Type: model.ArticleTypeMarkdown, Status: model.StatusPublished, Visibility: model.VisibilityPublic,
+		PublishedAt: &pub,
+		SEOTitle:        "Custom SEO Title",
+		MetaDescription: "Author meta description for crawlers.",
+		Summary:         "Human summary",
+		CoverImageURL:   "/media/cover.png",
+		OGImageURL:      "https://cdn.example/og.png",
+	})
+	require.NoError(t, err)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/seo-post", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "Custom SEO Title")
+	require.Contains(t, s, `name="description" content="Author meta description for crawlers."`)
+	require.Contains(t, s, `property="og:description" content="Author meta description for crawlers."`)
+	require.Contains(t, s, `property="og:image" content="https://cdn.example/og.png"`)
+	require.Contains(t, s, `"headline":"Custom SEO Title"`)
+	require.Contains(t, s, `"image":"https://cdn.example/og.png"`)
+	// Display title still on the page body (h1), SEO title in document title.
+	require.Contains(t, s, "Display Title")
+}
+
+func TestPublic_Article_EmptySEOFallsBackToBodyClip(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedArticle(t, repo, "auto-seo", "Auto Title",
+		"# Hello\n\nThis is plain body text for auto summary.",
+		model.StatusPublished, model.VisibilityPublic)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/auto-seo", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `name="description"`)
+	require.Contains(t, s, "Hello")
+	require.Contains(t, s, "plain body text")
+	require.NotContains(t, s, `property="og:image"`) // no image when unset
+}
+
 func TestPublic_Article_RendersMarkdown(t *testing.T) {
 	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "hello", "Hello", "# Hello\n\nA **bold** word.", model.StatusPublished, model.VisibilityPublic)

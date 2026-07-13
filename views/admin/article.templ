@@ -58,7 +58,12 @@ templ ArticleList(items []model.Article, q string, csrfToken string) {
 					<tbody>
 						for _, a := range items {
 							<tr>
-								<td>{ a.Title }</td>
+								<td>
+									{ a.Title }
+									if strings.TrimSpace(a.MetaDescription) == "" && strings.TrimSpace(a.Summary) == "" {
+										<span class="status-pill vis-private" title="未填 meta description / 摘要；前台將用內文自動摘要">缺 description</span>
+									}
+								</td>
 								<td>
 									<span class={ "status-pill", "status-" + string(a.Status) }>{ string(a.Status) }</span>
 									<span class={ "status-pill", "vis-" + string(a.Visibility) }>{ string(a.Visibility) }</span>
@@ -85,7 +90,8 @@ templ ArticleList(items []model.Article, q string, csrfToken string) {
 
 // ArticleForm renders the create/edit form for Markdown articles.
 // Body uses Vditor (CDN) for IR / WYSIWYG / source; falls back to textarea.
-templ ArticleForm(action string, a *model.Article, csrfToken string) {
+// llmEnabled shows the AI SEO generate control when the server has LLM config.
+templ ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled bool) {
 	<div class="admin-page">
 	<h1>編輯文章</h1>
 	<p><a href="/admin">← 文章列表</a></p>
@@ -163,18 +169,23 @@ templ ArticleForm(action string, a *model.Article, csrfToken string) {
 				<label><input name="regen_preview" type="checkbox"/> 重新產生預覽 token</label>
 			</p>
 		}
+		@seoShareFields(a, llmEnabled)
 		<p><button type="submit">儲存</button></p>
 	</form>
 	<script src="/static/js/visibility-password.js" defer></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.css"/>
 	<script src="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js"></script>
 	<script src="/static/js/editor.js" defer></script>
+	if llmEnabled {
+		<script src="/static/js/ai-seo.js" defer></script>
+	}
 	</div>
 }
 
 // HTMLUploadEdit edits metadata for html_upload articles only.
 // Body is the entry file path on disk — never edited as markdown here.
-templ HTMLUploadEdit(action string, a *model.Article, csrfToken string) {
+// llmEnabled is accepted for API symmetry; AI SEO is markdown-first (button hidden).
+templ HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnabled bool) {
 	<div class="admin-page">
 	<h1>編輯 HTML 上傳</h1>
 	<p><a href="/admin">← 文章列表</a></p>
@@ -233,6 +244,7 @@ templ HTMLUploadEdit(action string, a *model.Article, csrfToken string) {
 				<strong>raw_mode</strong>：原檔全螢幕（關 = 站台外框 + iframe）
 			</label>
 		</p>
+		@seoShareFields(a, false)
 		<p class="meta">若要更換 HTML／zip 內容，請刪除此篇後重新上傳（同 slug 可重建）。</p>
 		<p><button type="submit">儲存</button></p>
 	</form>
@@ -242,4 +254,59 @@ templ HTMLUploadEdit(action string, a *model.Article, csrfToken string) {
 		<p><button type="submit">刪除此篇</button></p>
 	</form>
 	</div>
+}
+
+// seoShareFields is the shared SEO / social section for markdown and HTML upload forms.
+// Empty fields keep automatic public fallbacks (title / body clip / no OG image).
+// showAI enables the S2 generate button (markdown forms only when LLM configured).
+templ seoShareFields(a *model.Article, showAI bool) {
+	<fieldset class="seo-share-fields" id="seo-share-fields">
+		<legend>SEO / 分享</legend>
+		<p class="meta">
+			控制搜尋與社群預覽用的中繼資料。
+			<strong>OG 圖 ≠ 封面</strong>：OG 只給分享卡片；封面可給列表／頁內。
+			欄位留空則沿用自動行為（標題、內文摘要）。
+		</p>
+		if showAI {
+			<p class="ai-seo-actions">
+				<button type="button" id="ai-seo-btn" class="ai-seo-btn"
+					data-endpoint="/admin/ai/seo"
+					data-article-id={ strconv.FormatInt(a.ID, 10) }>
+					AI 產生 SEO
+				</button>
+				<span id="ai-seo-status" class="meta" aria-live="polite"></span>
+			</p>
+			<div id="ai-seo-outline" class="ai-seo-outline" hidden>
+				<p class="meta"><strong>大綱（僅預覽，不存檔）</strong></p>
+				<ul id="ai-seo-outline-list"></ul>
+			</div>
+		} else {
+			<p class="meta">AI 產生 SEO：未設定 <code>WIKIBUILD_LLM_*</code>，按鈕已停用。</p>
+		}
+		<p>
+			<label>SEO 標題（可與顯示標題不同；空 = 用標題）<br/>
+				<input name="seo_title" value={ a.SEOTitle } placeholder={ a.Title } autocomplete="off"/>
+			</label>
+		</p>
+		<p>
+			<label>摘要（列表／RSS 優先；2–4 句）<br/>
+				<textarea name="summary" rows="3" cols="80" placeholder="給人看的短摘要">{ a.Summary }</textarea>
+			</label>
+		</p>
+		<p>
+			<label>Meta description（搜尋／OG 描述；約 120–155 字）<br/>
+				<textarea name="meta_description" rows="2" cols="80" placeholder="空則用摘要或內文自動裁切">{ a.MetaDescription }</textarea>
+			</label>
+		</p>
+		<p>
+			<label>封面圖 URL（可選）<br/>
+				<input name="cover_image_url" type="text" value={ a.CoverImageURL } placeholder="/media/… 或 https://…" autocomplete="off"/>
+			</label>
+		</p>
+		<p>
+			<label>OG / Twitter 圖 URL（可選；空則用封面）<br/>
+				<input name="og_image_url" type="text" value={ a.OGImageURL } placeholder="/media/… 或 https://…" autocomplete="off"/>
+			</label>
+		</p>
+	</fieldset>
 }

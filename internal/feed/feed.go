@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/seo"
 )
 
 // Site describes the feed channel / sitemap origin.
@@ -28,13 +29,15 @@ type Item struct {
 }
 
 // FromArticles maps domain articles into feed items (caller filters visibility).
+// Title uses display title (feeds show human title; SEO title is for HTML meta).
+// Summary prefers author summary / meta / body clip (see seo.EffectiveFeedSummary).
 func FromArticles(articles []model.Article) []Item {
 	out := make([]Item, 0, len(articles))
 	for _, a := range articles {
 		it := Item{
 			Title:   a.Title,
 			Slug:    a.Slug,
-			Summary: summary(a.Body, 280),
+			Summary: seo.EffectiveFeedSummary(a),
 		}
 		if a.PublishedAt != nil {
 			it.Updated = a.PublishedAt.UTC()
@@ -44,18 +47,6 @@ func FromArticles(articles []model.Article) []Item {
 		out = append(out, it)
 	}
 	return out
-}
-
-func summary(body string, max int) string {
-	s := strings.TrimSpace(body)
-	// Strip crude markdown markers for a readable blurb.
-	s = strings.ReplaceAll(s, "#", "")
-	s = strings.ReplaceAll(s, "*", "")
-	s = strings.Join(strings.Fields(s), " ")
-	if len(s) <= max {
-		return s
-	}
-	return s[:max] + "…"
 }
 
 func abs(base, path string) string {

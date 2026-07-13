@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Sentinel errors. Missing-env errors are wrapped per-var and joined, so
@@ -47,6 +48,17 @@ type Config struct {
 	DefaultProtectedPass string
 	BaseURL              string // absolute origin for feeds/sitemap/SEO
 	SiteTitle            string // feed channel title
+	// Optional OpenAI-compatible LLM (S2). All three required for LLMEnabled.
+	LLMBaseURL string
+	LLMAPIKey  string
+	LLMModel   string
+}
+
+// LLMEnabled is true when base URL, API key, and model are all non-empty.
+func (c Config) LLMEnabled() bool {
+	return strings.TrimSpace(c.LLMAPIKey) != "" &&
+		strings.TrimSpace(c.LLMBaseURL) != "" &&
+		strings.TrimSpace(c.LLMModel) != ""
 }
 
 // Load reads settings via lookup, applies defaults, and validates required
@@ -82,6 +94,17 @@ func Load(lookup LookupFunc) (Config, error) {
 	}
 	if v, ok := lookup("WIKIBUILD_SITE_TITLE"); ok && v != "" {
 		cfg.SiteTitle = v
+	}
+
+	// Optional LLM (OpenAI-compatible). Empty key → feature disabled.
+	if v, ok := lookup("WIKIBUILD_LLM_BASE_URL"); ok {
+		cfg.LLMBaseURL = strings.TrimSpace(v)
+	}
+	if v, ok := lookup("WIKIBUILD_LLM_API_KEY"); ok {
+		cfg.LLMAPIKey = strings.TrimSpace(v)
+	}
+	if v, ok := lookup("WIKIBUILD_LLM_MODEL"); ok {
+		cfg.LLMModel = strings.TrimSpace(v)
 	}
 
 	var errs []error

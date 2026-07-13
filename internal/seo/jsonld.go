@@ -12,26 +12,30 @@ import (
 
 // ArticleJSONLD returns a schema.org BlogPosting JSON-LD object as a string.
 // baseURL has no trailing slash; empty baseURL yields an empty string (skip).
-func ArticleJSONLD(baseURL string, a model.Article, description string) string {
+// headline, description, and image should be effective (fallback-resolved) values.
+func ArticleJSONLD(baseURL string, a model.Article, description, image string) string {
 	baseURL = strings.TrimRight(baseURL, "/")
 	if baseURL == "" || a.Slug == "" {
 		return ""
 	}
 	type blogPosting struct {
-		Context      string `json:"@context"`
-		Type         string `json:"@type"`
-		Headline     string `json:"headline"`
-		Description  string `json:"description,omitempty"`
-		URL          string `json:"url"`
+		Context       string `json:"@context"`
+		Type          string `json:"@type"`
+		Headline      string `json:"headline"`
+		Description   string `json:"description,omitempty"`
+		URL           string `json:"url"`
+		Image         string `json:"image,omitempty"`
 		DatePublished string `json:"datePublished,omitempty"`
 		DateModified  string `json:"dateModified,omitempty"`
 	}
+	headline := EffectiveTitle(a)
 	bp := blogPosting{
 		Context:     "https://schema.org",
 		Type:        "BlogPosting",
-		Headline:    a.Title,
+		Headline:    headline,
 		Description: description,
 		URL:         baseURL + "/" + a.Slug,
+		Image:       strings.TrimSpace(image),
 	}
 	if a.PublishedAt != nil {
 		bp.DatePublished = a.PublishedAt.UTC().Format(time.RFC3339)

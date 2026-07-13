@@ -16,6 +16,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/handler"
+	"github.com/sam33339999/wikibuild/internal/llm"
 	"github.com/sam33339999/wikibuild/internal/media"
 	"github.com/sam33339999/wikibuild/internal/store"
 )
@@ -34,6 +35,8 @@ type Deps struct {
 	StaticDir       string // CSS/JS theme assets; empty → ./static
 	BaseURL         string // absolute site origin for feeds/sitemap/SEO (no trailing slash)
 	SiteTitle       string // feed channel title
+	// Optional OpenAI-compatible LLM (S2 AI SEO). Nil or disabled → button off.
+	LLM llm.Client
 }
 
 // mediaDir resolves the on-disk image directory: explicit MediaDir wins,
@@ -84,7 +87,13 @@ func New(d Deps) *fiber.App {
 		Limiter: d.Limiter,
 		Clock:   d.Clock,
 	})
-	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock, d.ContentDir)
+	llmClient := d.LLM
+	if llmClient == nil {
+		llmClient = llm.NewOpenAIClient(llm.OpenAIConfig{}) // disabled
+	}
+	llmOn := llmClient.Enabled()
+	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock, d.ContentDir, llmOn)
+	aiseo := handler.NewAISEO(d.Store, llmClient, nil)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir, d.Hasher)
 	mediaH := handler.NewMedia(mediaDir(d))
@@ -128,6 +137,9 @@ func New(d Deps) *fiber.App {
 	admin.Get("/redirects", redirects.List)
 	admin.Post("/redirects", redirects.Create)
 	admin.Post("/redirects/delete", redirects.Delete)
+	// AI SEO (static paths before /:id).
+	admin.Post("/ai/seo", aiseo.Generate)
+	admin.Post("/:id/ai/seo", aiseo.GenerateForArticle)
 	admin.Get("/:id/edit", articleAdmin.EditForm)
 	admin.Post("/:id", articleAdmin.Update)
 	admin.Post("/:id/delete", articleAdmin.Delete)

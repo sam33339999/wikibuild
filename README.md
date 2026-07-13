@@ -72,5 +72,5 @@ make run               # 需本機有 sqlc/templ/migrate 時再 make generate
 
 | | |
 |--|--|
-| **現在** | v1.0：CRUD、可見性、MD/HTML、搜尋／標籤／封存、feed／sitemap、主題、TOC… |
-| **接下來** | [v1.1 spec](docs/specs/v1.1-ai-seo-mcp.md)：SEO 可編欄位 → LLM 摘要 → 寫作搜尋 → MCP |
+| **現在** | v1.0 + **v1.1 S1–S2**：可編 SEO 欄位 + 後台「AI 產生 SEO」（OpenAI 兼容） |
+| **接下來** | [v1.1](docs/specs/v1.1-ai-seo-mcp.md) S3–S4：寫作搜尋 → MCP |

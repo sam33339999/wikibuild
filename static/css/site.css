@@ -403,6 +403,61 @@ body:has(.admin-page) .site-footer {
 .admin-page .md-editor-host {
   max-width: 100%;
 }
+.admin-page .seo-share-fields {
+  margin: 1.5rem 0 1rem;
+  padding: 1rem 1.1rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface, var(--bg)) 92%, var(--border));
+}
+.admin-page .seo-share-fields legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.admin-page .seo-share-fields textarea {
+  width: 100%;
+  max-width: 40rem;
+  font: inherit;
+}
+.admin-page .ai-seo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+}
+.admin-page .ai-seo-btn {
+  font: inherit;
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--link) 40%, var(--border));
+  background: color-mix(in srgb, var(--link) 12%, transparent);
+  color: var(--link);
+  cursor: pointer;
+}
+.admin-page .ai-seo-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--link) 20%, transparent);
+}
+.admin-page .ai-seo-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.admin-page .ai-seo-error {
+  color: var(--danger);
+}
+.admin-page .ai-seo-outline {
+  margin: 0.5rem 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: color-mix(in srgb, var(--bg) 80%, var(--border));
+}
+.admin-page .ai-seo-outline ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1.25rem;
+}
 
 /* ---- Type ---- */
 h1, h2, h3, h4 {

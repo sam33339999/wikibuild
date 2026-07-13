@@ -41,36 +41,42 @@ func (q *Queries) CountArticles(ctx context.Context, arg CountArticlesParams) (i
 const createArticle = `-- name: CreateArticle :one
 INSERT INTO articles (
     slug, title, type, status, visibility, password, raw_mode, pinned, show_toc,
-    body, tags, created_at, updated_at, published_at, publish_at, preview_token
+    body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url,
+    created_at, updated_at, published_at, publish_at, preview_token
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9,
-    $10, $11,
-    COALESCE($12, now()),
-    COALESCE($13, now()),
-    $14,
-    $15,
-    $16
+    $10, $11, $12, $13, $14, $15, $16,
+    COALESCE($17, now()),
+    COALESCE($18, now()),
+    $19,
+    $20,
+    $21
 )
-RETURNING id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token
+RETURNING id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token
 `
 
 type CreateArticleParams struct {
-	Slug         string
-	Title        string
-	Type         string
-	Status       string
-	Visibility   string
-	Password     string
-	RawMode      bool
-	Pinned       bool
-	ShowToc      bool
-	Body         string
-	Tags         []string
-	CreatedAt    interface{}
-	UpdatedAt    interface{}
-	PublishedAt  pgtype.Timestamptz
-	PublishAt    pgtype.Timestamptz
-	PreviewToken string
+	Slug            string
+	Title           string
+	Type            string
+	Status          string
+	Visibility      string
+	Password        string
+	RawMode         bool
+	Pinned          bool
+	ShowToc         bool
+	Body            string
+	Tags            []string
+	SeoTitle        string
+	Summary         string
+	MetaDescription string
+	CoverImageUrl   string
+	OgImageUrl      string
+	CreatedAt       interface{}
+	UpdatedAt       interface{}
+	PublishedAt     pgtype.Timestamptz
+	PublishAt       pgtype.Timestamptz
+	PreviewToken    string
 }
 
 func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error) {
@@ -86,6 +92,11 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		arg.ShowToc,
 		arg.Body,
 		arg.Tags,
+		arg.SeoTitle,
+		arg.Summary,
+		arg.MetaDescription,
+		arg.CoverImageUrl,
+		arg.OgImageUrl,
 		arg.CreatedAt,
 		arg.UpdatedAt,
 		arg.PublishedAt,
@@ -106,6 +117,11 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		&i.ShowToc,
 		&i.Body,
 		&i.Tags,
+		&i.SeoTitle,
+		&i.Summary,
+		&i.MetaDescription,
+		&i.CoverImageUrl,
+		&i.OgImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublishedAt,
@@ -125,7 +141,7 @@ func (q *Queries) DeleteArticle(ctx context.Context, id int64) error {
 }
 
 const getArticle = `-- name: GetArticle :one
-SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token FROM articles WHERE id = $1
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token FROM articles WHERE id = $1
 `
 
 func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
@@ -144,6 +160,11 @@ func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
 		&i.ShowToc,
 		&i.Body,
 		&i.Tags,
+		&i.SeoTitle,
+		&i.Summary,
+		&i.MetaDescription,
+		&i.CoverImageUrl,
+		&i.OgImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublishedAt,
@@ -154,7 +175,7 @@ func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
 }
 
 const getArticleByPreviewToken = `-- name: GetArticleByPreviewToken :one
-SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token FROM articles WHERE preview_token = $1 AND preview_token <> ''
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token FROM articles WHERE preview_token = $1 AND preview_token <> ''
 `
 
 func (q *Queries) GetArticleByPreviewToken(ctx context.Context, previewToken string) (Article, error) {
@@ -173,6 +194,11 @@ func (q *Queries) GetArticleByPreviewToken(ctx context.Context, previewToken str
 		&i.ShowToc,
 		&i.Body,
 		&i.Tags,
+		&i.SeoTitle,
+		&i.Summary,
+		&i.MetaDescription,
+		&i.CoverImageUrl,
+		&i.OgImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublishedAt,
@@ -183,7 +209,7 @@ func (q *Queries) GetArticleByPreviewToken(ctx context.Context, previewToken str
 }
 
 const getArticleBySlug = `-- name: GetArticleBySlug :one
-SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token FROM articles WHERE slug = $1
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token FROM articles WHERE slug = $1
 `
 
 func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, error) {
@@ -202,6 +228,11 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, e
 		&i.ShowToc,
 		&i.Body,
 		&i.Tags,
+		&i.SeoTitle,
+		&i.Summary,
+		&i.MetaDescription,
+		&i.CoverImageUrl,
+		&i.OgImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublishedAt,
@@ -212,7 +243,7 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, e
 }
 
 const listArticles = `-- name: ListArticles :many
-SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token FROM articles
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token FROM articles
 WHERE ($1::text IS NULL OR status = $1::text)
   AND ($2::text IS NULL OR visibility = $2::text)
   AND ($3::text IS NULL OR $3::text = ANY(tags))
@@ -261,6 +292,11 @@ func (q *Queries) ListArticles(ctx context.Context, arg ListArticlesParams) ([]A
 			&i.ShowToc,
 			&i.Body,
 			&i.Tags,
+			&i.SeoTitle,
+			&i.Summary,
+			&i.MetaDescription,
+			&i.CoverImageUrl,
+			&i.OgImageUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PublishedAt,
@@ -278,7 +314,7 @@ func (q *Queries) ListArticles(ctx context.Context, arg ListArticlesParams) ([]A
 }
 
 const listDueScheduled = `-- name: ListDueScheduled :many
-SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token FROM articles
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token FROM articles
 WHERE status = 'draft'
   AND publish_at IS NOT NULL
   AND publish_at <= $1
@@ -308,6 +344,11 @@ func (q *Queries) ListDueScheduled(ctx context.Context, now pgtype.Timestamptz) 
 			&i.ShowToc,
 			&i.Body,
 			&i.Tags,
+			&i.SeoTitle,
+			&i.Summary,
+			&i.MetaDescription,
+			&i.CoverImageUrl,
+			&i.OgImageUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PublishedAt,
@@ -337,31 +378,41 @@ UPDATE articles SET
     show_toc      = $9,
     body          = $10,
     tags          = $11,
-    updated_at    = COALESCE($12, now()),
-    published_at  = $13,
-    publish_at    = $14,
-    preview_token = $15
-WHERE id = $16
-RETURNING id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, created_at, updated_at, published_at, publish_at, preview_token
+    seo_title         = $12,
+    summary           = $13,
+    meta_description  = $14,
+    cover_image_url   = $15,
+    og_image_url      = $16,
+    updated_at    = COALESCE($17, now()),
+    published_at  = $18,
+    publish_at    = $19,
+    preview_token = $20
+WHERE id = $21
+RETURNING id, slug, title, type, status, visibility, password, raw_mode, pinned, show_toc, body, tags, seo_title, summary, meta_description, cover_image_url, og_image_url, created_at, updated_at, published_at, publish_at, preview_token
 `
 
 type UpdateArticleParams struct {
-	Slug         string
-	Title        string
-	Type         string
-	Status       string
-	Visibility   string
-	Password     string
-	RawMode      bool
-	Pinned       bool
-	ShowToc      bool
-	Body         string
-	Tags         []string
-	UpdatedAt    pgtype.Timestamptz
-	PublishedAt  pgtype.Timestamptz
-	PublishAt    pgtype.Timestamptz
-	PreviewToken string
-	ID           int64
+	Slug            string
+	Title           string
+	Type            string
+	Status          string
+	Visibility      string
+	Password        string
+	RawMode         bool
+	Pinned          bool
+	ShowToc         bool
+	Body            string
+	Tags            []string
+	SeoTitle        string
+	Summary         string
+	MetaDescription string
+	CoverImageUrl   string
+	OgImageUrl      string
+	UpdatedAt       pgtype.Timestamptz
+	PublishedAt     pgtype.Timestamptz
+	PublishAt       pgtype.Timestamptz
+	PreviewToken    string
+	ID              int64
 }
 
 func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (Article, error) {
@@ -377,6 +428,11 @@ func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (A
 		arg.ShowToc,
 		arg.Body,
 		arg.Tags,
+		arg.SeoTitle,
+		arg.Summary,
+		arg.MetaDescription,
+		arg.CoverImageUrl,
+		arg.OgImageUrl,
 		arg.UpdatedAt,
 		arg.PublishedAt,
 		arg.PublishAt,
@@ -397,6 +453,11 @@ func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (A
 		&i.ShowToc,
 		&i.Body,
 		&i.Tags,
+		&i.SeoTitle,
+		&i.Summary,
+		&i.MetaDescription,
+		&i.CoverImageUrl,
+		&i.OgImageUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublishedAt,
