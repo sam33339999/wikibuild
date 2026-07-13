@@ -74,6 +74,7 @@ func run() error {
 		Clock:           clk,
 		SiteDefaultPass: cfg.DefaultProtectedPass,
 		ContentDir:      cfg.ContentDir,
+		StaticDir:       "./static",
 		BaseURL:         cfg.BaseURL,
 		SiteTitle:       cfg.SiteTitle,
 	})

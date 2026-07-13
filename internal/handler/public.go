@@ -15,6 +15,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/gate"
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/render"
+	"github.com/sam33339999/wikibuild/internal/seo"
 	"github.com/sam33339999/wikibuild/internal/store"
 	"github.com/sam33339999/wikibuild/views/layout"
 	publicviews "github.com/sam33339999/wikibuild/views/public"
@@ -162,17 +163,19 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 // or injects it into the layout.
 func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 	comments := h.commentConfig(c)
-	seo := layout.SEO{
+	desc := feedSummary(a.Body)
+	pageSEO := layout.SEO{
 		Type:        "article",
-		Description: feedSummary(a.Body),
+		Description: desc,
+		JSONLD:      seo.ArticleJSONLD(h.baseURL, a, desc),
 	}
 	if h.baseURL != "" {
-		seo.Canonical = h.baseURL + "/" + a.Slug
+		pageSEO.Canonical = h.baseURL + "/" + a.Slug
 	}
 	if a.Type != model.ArticleTypeHTMLUpload {
 		html, toc := render.RenderWithTOC(a.Body)
 		return renderPageSEO(c, a.Title, publicviews.Article(
-			a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a), comments), seo)
+			a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a), comments), pageSEO)
 	}
 
 	data, err := readUploadFile(h.contentDir, a.Slug, a.Body)
@@ -185,7 +188,7 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 		return c.Type("html").Send(data)
 	}
 	// Inject the uploaded HTML into the layout (no TOC/reading time for pre-built pages).
-	return renderPageSEO(c, a.Title, publicviews.Article(a, string(data), nil, 0, nil, comments), seo)
+	return renderPageSEO(c, a.Title, publicviews.Article(a, string(data), nil, 0, nil, comments), pageSEO)
 }
 
 func (h *Public) commentConfig(c fiber.Ctx) publicviews.CommentConfig {

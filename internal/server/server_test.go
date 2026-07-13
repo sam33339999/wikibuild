@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -42,6 +43,8 @@ func buildApp(t *testing.T) *fiber.App {
 
 	root := t.TempDir()
 	fc := clock.NewFake(time.Unix(1_700_000_000, 0))
+	// Tests run with package dir as cwd (internal/server); theme assets live at repo root.
+	staticDir := filepath.Join("..", "..", "static")
 	app := server.New(server.Deps{
 		Store:           repo,
 		Hasher:          fakeHasher{},
@@ -51,6 +54,9 @@ func buildApp(t *testing.T) *fiber.App {
 		SiteDefaultPass: "sitedefault",
 		ContentDir:      root + "/uploads",
 		MediaDir:        root + "/media",
+		StaticDir:       staticDir,
+		BaseURL:         "https://ex.com",
+		SiteTitle:       "Test Site",
 	})
 	return app
 }
@@ -525,4 +531,103 @@ func TestServer_TagsRenameFlow(t *testing.T) {
 	body2, _ := io.ReadAll(list2.Body)
 	require.Contains(t, string(body2), "new")
 	require.NotContains(t, string(body2), ">old<")
+}
+
+// --- M7: static assets, theme chrome, JSON-LD, v1.0 smoke ---
+
+func TestServer_StaticCSSAndThemeJS(t *testing.T) {
+	app := buildApp(t)
+
+	css, err := do(app, http.MethodGet, "/static/css/site.css", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, css.StatusCode)
+	body, _ := io.ReadAll(css.Body)
+	require.Contains(t, string(body), "--bg")
+	require.Contains(t, string(body), "[data-theme=\"dark\"]")
+
+	js, err := do(app, http.MethodGet, "/static/js/theme.js", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, js.StatusCode)
+	jsBody, _ := io.ReadAll(js.Body)
+	require.Contains(t, string(jsBody), "wikibuild-theme")
+}
+
+func TestServer_LayoutIncludesThemeChrome(t *testing.T) {
+	app := buildApp(t)
+	resp, err := do(app, http.MethodGet, "/", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `/static/css/site.css`)
+	require.Contains(t, s, `/static/js/theme.js`)
+	require.Contains(t, s, `id="theme-toggle"`)
+	require.Contains(t, s, `wikibuild-theme`) // FOUC-prevention script
+	require.Contains(t, s, `class="site-header"`)
+}
+
+func TestServer_Article_IncludesJSONLD(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	form := url.Values{}
+	form.Set("slug", "jsonld-post")
+	form.Set("title", "JSON-LD Post")
+	form.Set("body", "Hello structured data world with enough text for a description.")
+	form.Set("status", "published")
+	form.Set("visibility", "public")
+	form.Set("_csrf", tok)
+	_, err := do(app, http.MethodPost, "/admin/new", strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+
+	resp, err := do(app, http.MethodGet, "/jsonld-post", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `application/ld+json`)
+	require.Contains(t, s, `BlogPosting`)
+	require.Contains(t, s, `https://ex.com/jsonld-post`)
+	require.Contains(t, s, `JSON-LD Post`)
+}
+
+func TestServer_V1Smoke_PublicSurface(t *testing.T) {
+	// Acceptance: core public endpoints respond and feeds/discovery work together.
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	form := url.Values{}
+	form.Set("slug", "smoke")
+	form.Set("title", "Smoke Test")
+	form.Set("body", "Body for smoke # Heading\n\nParagraph.")
+	form.Set("tags", "smoke")
+	form.Set("status", "published")
+	form.Set("visibility", "public")
+	form.Set("_csrf", tok)
+	resp, err := do(app, http.MethodPost, "/admin/new", strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+
+	checks := []struct {
+		path string
+		want string
+	}{
+		{"/", "Smoke Test"},
+		{"/smoke", "Smoke Test"},
+		{"/search?q=Smoke", "Smoke Test"},
+		{"/tag/smoke", "Smoke Test"},
+		{"/archive", "封存"},
+		{"/feed", "Smoke Test"},
+		{"/feed/atom", "Smoke Test"},
+		{"/feed.json", "Smoke Test"},
+		{"/sitemap.xml", "/smoke"},
+		{"/robots.txt", "Sitemap:"},
+	}
+	for _, tc := range checks {
+		r, err := do(app, http.MethodGet, tc.path, nil, nil)
+		require.NoError(t, err, tc.path)
+		require.Equal(t, http.StatusOK, r.StatusCode, tc.path)
+		b, _ := io.ReadAll(r.Body)
+		require.Contains(t, string(b), tc.want, tc.path)
+	}
 }

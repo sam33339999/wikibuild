@@ -1,15 +1,15 @@
 // Package layout holds shared HTML chrome (doctype, head, body wrapper) used
-// by both admin and public pages. Kept minimal; per-section nav lives in the
-// pages that need it.
+// by both admin and public pages.
 package layout
 
-// SEO holds optional head meta for public pages (feeds, OG, canonical).
-// Zero value means "no extra SEO tags".
+// SEO holds optional head meta for public pages (feeds, OG, canonical, JSON-LD).
+// Zero value means "no extra SEO tags" beyond defaults.
 type SEO struct {
 	Description string
 	Canonical   string
 	Type        string // "website" or "article"
 	Image       string
+	JSONLD      string // raw JSON for <script type="application/ld+json">
 }
 
 // Page wraps page content in the shared HTML document. title sets <title>.
@@ -21,6 +21,11 @@ templ Page(title string, content templ.Component, seo SEO) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title }</title>
+			// Apply stored theme before paint to avoid flash of wrong theme.
+			<script>
+				(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+			</script>
+			<link rel="stylesheet" href="/static/css/site.css"/>
 			if seo.Description != "" {
 				<meta name="description" content={ seo.Description }/>
 				<meta property="og:description" content={ seo.Description }/>
@@ -47,9 +52,31 @@ templ Page(title string, content templ.Component, seo SEO) {
 			<link rel="alternate" type="application/rss+xml" title="RSS" href="/feed"/>
 			<link rel="alternate" type="application/atom+xml" title="Atom" href="/feed/atom"/>
 			<link rel="alternate" type="application/feed+json" title="JSON Feed" href="/feed.json"/>
+			// templ treats <script> children as opaque text, so emit the whole
+			// JSON-LD tag via Raw (JSON is produced by encoding/json).
+			if seo.JSONLD != "" {
+				@templ.Raw(`<script type="application/ld+json">` + seo.JSONLD + `</script>`)
+			}
 		</head>
 		<body>
-			@content
+			<header class="site-header">
+				<a class="brand" href="/">WikiBuild</a>
+				<nav class="site-nav" aria-label="主要">
+					<a href="/">首頁</a>
+					<a href="/search">搜尋</a>
+					<a href="/archive">封存</a>
+					<a href="/feed">RSS</a>
+					<a href="/admin">後台</a>
+					<button type="button" id="theme-toggle" class="theme-toggle" data-theme-mode="auto" aria-label="切換主題">主題：自動</button>
+				</nav>
+			</header>
+			<main class="site-main">
+				@content
+			</main>
+			<footer class="site-footer">
+				<a href="/feed">RSS</a> · <a href="/sitemap.xml">Sitemap</a>
+			</footer>
+			<script src="/static/js/theme.js" defer></script>
 		</body>
 	</html>
 }

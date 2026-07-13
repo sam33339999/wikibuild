@@ -1,0 +1,332 @@
+/* WikiBuild site theme — CSS variables for light / dark / auto. */
+:root,
+[data-theme="light"] {
+  --bg: #faf9f7;
+  --bg-elevated: #ffffff;
+  --fg: #1a1a1a;
+  --fg-muted: #5c5c5c;
+  --border: #e4e1db;
+  --link: #0b57d0;
+  --link-hover: #0842a0;
+  --accent: #0b57d0;
+  --code-bg: #f0eeea;
+  --nav-bg: #ffffff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #121212;
+  --bg-elevated: #1e1e1e;
+  --fg: #e8e6e3;
+  --fg-muted: #a09b94;
+  --border: #33302c;
+  --link: #8ab4f8;
+  --link-hover: #aecbfa;
+  --accent: #8ab4f8;
+  --code-bg: #2a2a2a;
+  --nav-bg: #1a1a1a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --bg: #121212;
+    --bg-elevated: #1e1e1e;
+    --fg: #e8e6e3;
+    --fg-muted: #a09b94;
+    --border: #33302c;
+    --link: #8ab4f8;
+    --link-hover: #aecbfa;
+    --accent: #8ab4f8;
+    --code-bg: #2a2a2a;
+    --nav-bg: #1a1a1a;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 17px;
+  line-height: 1.65;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Noto Serif TC", serif;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Site chrome */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.site-header .brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: var(--fg);
+}
+
+.site-header .site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+}
+
+.site-header a {
+  color: var(--link);
+  text-decoration: none;
+}
+
+.site-header a:hover {
+  color: var(--link-hover);
+  text-decoration: underline;
+}
+
+.theme-toggle {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+}
+
+.site-main {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.25rem 3rem;
+}
+
+.site-main.wide {
+  max-width: 56rem;
+}
+
+/* Typography */
+h1, h2, h3, h4 {
+  line-height: 1.25;
+  font-weight: 700;
+  margin: 1.4em 0 0.5em;
+}
+
+h1 { font-size: 1.85rem; margin-top: 0; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.15rem; }
+
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+p, li { color: var(--fg); }
+.meta, .tags, time, .flash {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+}
+
+/* Article content (markdown) */
+.content {
+  margin-top: 1.25rem;
+}
+
+.content pre,
+.content code {
+  font-family: ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.content code {
+  background: var(--code-bg);
+  padding: 0.12em 0.35em;
+  border-radius: 4px;
+}
+
+.content pre {
+  background: var(--code-bg);
+  padding: 1rem 1.1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+.content pre code {
+  background: none;
+  padding: 0;
+}
+
+.content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.content blockquote {
+  margin: 1em 0;
+  padding: 0.25em 0 0.25em 1em;
+  border-left: 3px solid var(--accent);
+  color: var(--fg-muted);
+}
+
+.content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.95em;
+}
+
+.content th,
+.content td {
+  border: 1px solid var(--border);
+  padding: 0.4em 0.65em;
+}
+
+/* Lists / cards */
+article {
+  padding: 0.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+article:last-child {
+  border-bottom: none;
+}
+
+.toc, .backlinks, .comments, .archive-list {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.toc ul, .backlinks ul, .archive-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.pagination {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-top: 1.5rem;
+  font-family: system-ui, sans-serif;
+}
+
+/* Forms (admin + unlock + search) */
+form label {
+  display: block;
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="search"],
+input[type="datetime-local"],
+input:not([type]),
+textarea,
+select {
+  font: inherit;
+  width: 100%;
+  max-width: 36rem;
+  padding: 0.45rem 0.6rem;
+  margin-top: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elevated);
+  color: var(--fg);
+}
+
+textarea {
+  max-width: 100%;
+  min-height: 12rem;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+}
+
+button,
+button[type="submit"] {
+  font-family: system-ui, sans-serif;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+[data-theme="light"] button,
+:root:not([data-theme="dark"]) button {
+  color: #fff;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: system-ui, sans-serif;
+  font-size: 0.92rem;
+}
+
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Unlock / admin login card */
+.auth-card {
+  max-width: 22rem;
+  margin: 3rem auto;
+  padding: 1.5rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.site-footer {
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+
+.site-footer a {
+  color: var(--fg-muted);
+}

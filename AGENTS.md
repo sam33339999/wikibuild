@@ -6,24 +6,21 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 `README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
 
-**M0–M6 are COMPLETE.** The app builds, runs against real Postgres, and covers admin login, article CRUD, visibility gate, HTML uploads, M4 enrichment, M5 discovery, and M6 publish/distribute (schedule, preview links, redirects, feeds, sitemap/robots/SEO, giscus/utterances).
+**M0–M7 COMPLETE → v1.0 scope delivered.** Single-binary personal wiki/blog: admin + public, Markdown/HTML, visibility, discovery, publish/distribute, themed front-end.
 
 Implemented:
 - `internal/model/` — `Article` (+ `PublishAt`, `PreviewToken`, `Pinned`), `User`, `Redirect`
 - `internal/config/` — env loading; `BaseURL`, `SiteTitle`
-- `internal/clock/` — `Clock` interface (`Real` / `Fake`)
-- `internal/store/` — Articles + Tags + Redirects + Settings + Users; `ListDueScheduled`, preview token lookup
-- `internal/store/inmem/` + `postgres/` (testcontainers L4)
-- `internal/auth/`, `gate/`, `render/`, `media/`
-- `internal/feed/` — RSS / Atom / JSON Feed / sitemap / robots (pure L1)
-- `internal/scheduler/` — `Publisher.Tick` for due drafts
-- `internal/handler/` — auth, articles (schedule + preview token + slug→301), public (search/archive/tag/preview/SEO/comments), syndication, redirects admin, settings (comments), upload, media, tags
-- `internal/server/` — static routes before `/:slug` (feeds, preview, archive, …)
-- `views/` — admin (articles, tags, redirects, settings+comments), public (article+comments, search, archive)
-- `db/` — migrations through `000004_m6_publish` (publish_at, preview_token, redirects)
-- `cmd/wikibuild/main.go` — ensureAdmin + background publisher ticker + graceful shutdown
+- `internal/clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/` (JSON-LD)
+- `internal/store/` — Articles + Tags + Redirects + Settings + Users (inmem + postgres)
+- `internal/handler/` — full admin + public surface (search, archive, tags, preview, feeds, redirects, comments)
+- `internal/server/` — Fiber assembly; `/static/*` theme assets; discovery routes before `/:slug`
+- `static/css/site.css`, `static/js/theme.js` — light/dark/auto theme + layout polish (no npm)
+- `views/` — layout chrome (header, theme toggle, SEO/JSON-LD), admin + public pages
+- `db/` — migrations through `000004_m6_publish`
+- `cmd/wikibuild/main.go` — ensureAdmin + publisher ticker + graceful shutdown
 
-NOT yet present (M7): dark/light theme, layout polish, static assets, E2E.
+v1.1+ (OUT): version history, backup, series, related posts, image optimisation, etc.
 
 ## Toolchain (must be on PATH)
 

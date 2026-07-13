@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v3/extractors"
 	"github.com/gofiber/fiber/v3/middleware/csrf"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/gofiber/fiber/v3/middleware/static"
 	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/handler"
@@ -30,6 +31,7 @@ type Deps struct {
 	SiteDefaultPass string // fallback password for protected articles without their own
 	ContentDir      string // root for html_upload article files
 	MediaDir        string // root for pasted/dragged images; empty → sibling of ContentDir
+	StaticDir       string // CSS/JS theme assets; empty → ./static
 	BaseURL         string // absolute site origin for feeds/sitemap/SEO (no trailing slash)
 	SiteTitle       string // feed channel title
 }
@@ -63,6 +65,14 @@ func New(d Deps) *fiber.App {
 			extractors.FromForm("_csrf"),
 		),
 	}))
+
+	// Theme CSS/JS (no build step). Registered early so /static is never
+	// captured by /:slug.
+	staticDir := d.StaticDir
+	if staticDir == "" {
+		staticDir = "./static"
+	}
+	app.Get("/static/*", static.New(staticDir, static.Config{MaxAge: 86400}))
 
 	adminAuth := handler.NewAdminAuth(handler.AdminAuthDeps{
 		Store:   d.Store,
