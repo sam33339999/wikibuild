@@ -74,5 +74,5 @@ make run               # 需本機有 sqlc/templ/migrate 時再 make generate
 
 | | |
 |--|--|
-| **現在** | **v1.1 shipped**（在 v1.0 之上）：可編 SEO · AI 產生 SEO · 編輯器站內搜尋 · [MCP](docs/integrations-mcp.md) |
-| **可選後續** | S3b 寫作時 LLM 相關建議；HTML 上傳篇 AI SEO；見 [v1.1 spec](docs/specs/v1.1-ai-seo-mcp.md) |
+| **現在** | **v1.1 complete**（v1.0 之上）：SEO · AI SEO（MD+HTML）· 站內搜尋 / AI 相關建議 · 自動 OG 圖 · [MCP](docs/integrations-mcp.md) |
+| **規格** | [v1.1](docs/specs/v1.1-ai-seo-mcp.md) · [CHANGELOG](docs/CHANGELOG.md) |

@@ -303,10 +303,30 @@ func TestArticleAdmin_EditHTMLUpload_UsesMetaForm(t *testing.T) {
 	require.Contains(t, s, "SEO / 分享")
 	// Must not mount markdown Vditor for html_upload.
 	require.NotContains(t, s, `data-editor="vditor"`)
-	// AI SEO is markdown-only — do not show button or "missing LLM env" hint.
+	// LLM disabled in articleApp → show env hint, no button; OG available (saved id).
 	require.NotContains(t, s, `id="ai-seo-btn"`)
-	require.NotContains(t, s, "WIKIBUILD_LLM_")
-	require.NotContains(t, s, "AI 產生 SEO")
+	require.Contains(t, s, "WIKIBUILD_LLM_")
+	require.Contains(t, s, `id="ai-og-btn"`)
+}
+
+func TestArticleAdmin_EditHTMLUpload_AIEnabledShowsButton(t *testing.T) {
+	repo := inmem.New()
+	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil, t.TempDir(), true)
+	app := fiber.New()
+	app.Get("/admin/:id/edit", h.EditForm)
+	a, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "up", Title: "Upload", Body: "index.html",
+		Type: model.ArticleTypeHTMLUpload, Status: model.StatusPublished,
+		Visibility: model.VisibilityPublic,
+	})
+	require.NoError(t, err)
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin/"+strconv.FormatInt(a.ID, 10)+"/edit", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `id="ai-seo-btn"`)
+	require.Contains(t, s, "/static/js/ai-seo.js")
+	require.Contains(t, s, `id="ai-og-btn"`)
 }
 
 func TestArticleAdmin_UpdateHTMLUpload_PreservesBody(t *testing.T) {

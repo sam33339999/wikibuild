@@ -32,9 +32,10 @@ type Message struct {
 	Content string
 }
 
-// Client generates SEO fields from article title/body.
+// Client generates SEO fields and related-article suggestions.
 // Enabled reports whether the client has credentials to make requests.
 type Client interface {
 	Enabled() bool
 	GenerateSEO(ctx context.Context, title, body string) (SEOResult, error)
+	SuggestRelated(ctx context.Context, selection string, catalog []CatalogEntry) ([]RelatedSuggestion, error)
 }

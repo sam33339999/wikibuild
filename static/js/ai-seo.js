@@ -1,8 +1,6 @@
 /**
- * Admin AI SEO generate: POST /admin/ai/seo, pre-fill form fields.
+ * Admin AI SEO generate + OG image helper.
  * Does not save the article — author must click 儲存.
- * Expects #ai-seo-btn, form fields name=title|body|summary|meta_description,
- * and optional window.__wikibuildEditor() → Vditor from editor.js.
  */
 (function () {
   "use strict";
@@ -75,15 +73,34 @@
     return btn.getAttribute("data-endpoint") || "/admin/ai/seo";
   }
 
-  function init() {
+  function postForm(url, params) {
+    return fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-Csrf-Token": csrfToken(),
+      },
+      body: params.toString(),
+      credentials: "same-origin",
+    }).then(function (res) {
+      return res.json().then(function (data) {
+        return { ok: res.ok, status: res.status, data: data };
+      });
+    });
+  }
+
+  function initSEO() {
     var btn = document.getElementById("ai-seo-btn");
     if (!btn) return;
     var status = document.getElementById("ai-seo-status");
+    var articleId = btn.getAttribute("data-article-id") || "0";
 
     btn.addEventListener("click", function () {
       var body = formBody();
-      if (!String(body).trim()) {
-        setStatus(status, "請先寫入文正文再產生。", true);
+      // Markdown needs body in form; html_upload with saved id can omit body
+      // (server loads & strips HTML from disk).
+      if (!String(body).trim() && (!articleId || articleId === "0")) {
+        setStatus(status, "請先寫入正文再產生。", true);
         return;
       }
       if (!confirmOverwrite()) return;
@@ -94,26 +111,12 @@
       var params = new URLSearchParams();
       params.set("_csrf", csrfToken());
       params.set("title", formTitle());
-      params.set("body", body);
+      if (String(body).trim()) params.set("body", body);
 
-      fetch(endpointFor(btn), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Csrf-Token": csrfToken(),
-        },
-        body: params.toString(),
-        credentials: "same-origin",
-      })
-        .then(function (res) {
-          return res.json().then(function (data) {
-            return { ok: res.ok, status: res.status, data: data };
-          });
-        })
+      postForm(endpointFor(btn), params)
         .then(function (r) {
           if (!r.ok) {
-            var msg = (r.data && r.data.error) || ("錯誤 " + r.status);
-            setStatus(status, msg, true);
+            setStatus(status, (r.data && r.data.error) || "錯誤 " + r.status, true);
             return;
           }
           fillFields(r.data);
@@ -126,6 +129,47 @@
           btn.disabled = false;
         });
     });
+  }
+
+  function initOG() {
+    var btn = document.getElementById("ai-og-btn");
+    if (!btn) return;
+    var status = document.getElementById("ai-og-status");
+
+    btn.addEventListener("click", function () {
+      var og = document.querySelector('input[name="og_image_url"]');
+      if (og && og.value.trim()) {
+        if (!window.confirm("OG 圖 URL 已有值，確定覆寫為新產生的圖？")) return;
+      }
+      btn.disabled = true;
+      setStatus(status, "產生圖片中…", false);
+      var params = new URLSearchParams();
+      params.set("_csrf", csrfToken());
+      params.set("title", formTitle());
+      var ep = btn.getAttribute("data-endpoint");
+      postForm(ep, params)
+        .then(function (r) {
+          if (!r.ok) {
+            setStatus(status, (r.data && r.data.error) || "錯誤 " + r.status, true);
+            return;
+          }
+          if (og && r.data && r.data.url) {
+            og.value = r.data.url;
+          }
+          setStatus(status, "已填入 OG URL（尚未儲存）", false);
+        })
+        .catch(function (err) {
+          setStatus(status, String(err && err.message ? err.message : err), true);
+        })
+        .finally(function () {
+          btn.disabled = false;
+        });
+    });
+  }
+
+  function init() {
+    initSEO();
+    initOG();
   }
 
   if (document.readyState === "loading") {

@@ -5,19 +5,19 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 ## Repo status — read this first
 
 - **`README.md`** — what the project is, tech stack, differentiators (keep short).
-- **`docs/specs/`** — shipped + optional follow-ups. v1.1: [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md) (**shipped**; S3b optional).
+- **`docs/specs/`** — v1.1 fully shipped: [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md).
 - **`AGENTS.md`** (this file) — how to run, architecture seams, commands.
 
-**v1.0 (M0–M7) + v1.1 (S1–S2–S3a–S4) delivered.** Do not re-propose the locked stack or re-implement shipped milestones unless fixing bugs. Optional: S3b LLM related-article suggestions while writing.
+**v1.0 (M0–M7) + v1.1 complete** (S1–S4, S3b, HTML AI SEO, auto OG). Do not re-propose the locked stack or re-implement shipped milestones unless fixing bugs.
 
 Implemented (high level):
 - `internal/model/` — `Article` (SEO fields, `ShowTOC`, `PublishAt`, `PreviewToken`, `Pinned`, …), `User`, `Redirect`
-- `internal/config/`, `clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/`, `sitebrand/`, `llm/`, `mcp/`
+- `internal/config/`, `clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/`, `ogimage/`, `sitebrand/`, `llm/`, `mcp/`
 - `internal/store/` — Repository + inmem + postgres(sqlc); settings, tags, redirects
-- `internal/handler/` + `internal/server/` — full admin/public surface; AI SEO; editor search API; `/static/*`
-- `views/` — layout (SEO meta/JSON-LD), admin (SEO form, AI button, search panel), public (floating TOC)
+- `internal/handler/` + `internal/server/` — admin/public; AI SEO/related/OG; editor search; `/static/*`
+- `views/` — layout (SEO meta/JSON-LD), admin (SEO, AI, search, related), public (floating TOC)
 - `db/migrations/` through `000006_article_seo`
-- `static/` — site.css, toc-sidebar.js, editor, editor-search.js, ai-seo.js, theme
+- `static/` — site.css, chroma.css, toc-sidebar.js, editor, editor-search.js, ai-seo.js, theme
 - `cmd/wikibuild` (HTTP + `mcp` subcommand), `cmd/resetadmin`
 
 ## Toolchain (must be on PATH)

@@ -23,10 +23,10 @@ SEO control, AI assist, editor search, and MCP. Spec: [`specs/v1.1-ai-seo-mcp.md
 - Tools: list/get/create/update, set status/visibility (create defaults draft+private)
 - Docs: [`integrations-mcp.md`](./integrations-mcp.md)
 
-### Not in v1.1 (optional later)
-- S3b LLM related-article suggestions
-- AI SEO for html_upload
-- Auto-generated OG images
+### Follow-ups (same track, TDD)
+- **S3b** — `POST /admin/ai/related` + editor「AI 相關建議」
+- **HTML AI SEO** — strip upload HTML to plain text for GenerateSEO
+- **Auto OG** — `internal/ogimage` 1200×630 PNG → `/media/…` via `POST /admin/:id/ai/og`
 
 ## v1.0
 

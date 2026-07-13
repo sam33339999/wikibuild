@@ -2,7 +2,7 @@
 
 | Path | Purpose |
 |------|---------|
-| [specs/v1.1-ai-seo-mcp.md](./specs/v1.1-ai-seo-mcp.md) | **v1.1 shipped** (S1–S2–S3a–S4; S3b optional) |
+| [specs/v1.1-ai-seo-mcp.md](./specs/v1.1-ai-seo-mcp.md) | **v1.1 complete** (SEO, AI, search, related, OG, MCP) |
 | [integrations-mcp.md](./integrations-mcp.md) | MCP stdio tools for external agents |
 
 Project pitch / stack / differentiators: root [`README.md`](../README.md).  

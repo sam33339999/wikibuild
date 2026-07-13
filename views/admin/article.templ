@@ -116,11 +116,19 @@ templ ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled 
 			</div>
 			<aside class="editor-search" id="editor-search"
 				data-endpoint="/admin/api/articles/search"
-				data-exclude-id={ strconv.FormatInt(a.ID, 10) }>
+				data-related-endpoint="/admin/ai/related"
+				data-exclude-id={ strconv.FormatInt(a.ID, 10) }
+				data-llm-enabled={ strconv.FormatBool(llmEnabled) }>
 				<h2 class="editor-search-title">站內文章</h2>
 				<p class="meta">搜尋標題／內文，點選插入 <code>[[slug]]</code> wikilink。</p>
 				<label class="sr-only" for="editor-search-q">搜尋文章</label>
 				<input type="search" id="editor-search-q" placeholder="關鍵字…" autocomplete="off"/>
+				if llmEnabled {
+					<p class="ai-related-actions">
+						<button type="button" id="ai-related-btn" class="ai-seo-btn">AI 相關建議</button>
+					</p>
+					<p class="meta">依編輯器選取文字（或當前段落）建議站內連結。</p>
+				}
 				<ul id="editor-search-results" class="editor-search-results" aria-live="polite"></ul>
 				<p id="editor-search-status" class="meta" aria-live="polite"></p>
 			</aside>
@@ -189,7 +197,7 @@ templ ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled 
 	<script src="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js"></script>
 	<script src="/static/js/editor.js" defer></script>
 	<script src="/static/js/editor-search.js" defer></script>
-	if llmEnabled {
+	if llmEnabled || a.ID > 0 {
 		<script src="/static/js/ai-seo.js" defer></script>
 	}
 	</div>
@@ -197,7 +205,7 @@ templ ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled 
 
 // HTMLUploadEdit edits metadata for html_upload articles only.
 // Body is the entry file path on disk — never edited as markdown here.
-// AI SEO is markdown-only (S2); no button and no "LLM not configured" hint here.
+// AI SEO uses disk HTML → plain text (S2 html path) when llmEnabled.
 templ HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnabled bool) {
 	<div class="admin-page">
 	<h1>編輯 HTML 上傳</h1>
@@ -257,11 +265,14 @@ templ HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnabl
 				<strong>raw_mode</strong>：原檔全螢幕（關 = 站台外框 + iframe）
 			</label>
 		</p>
-		@seoShareFields(a, false, false)
+		@seoShareFields(a, true, llmEnabled)
 		<p class="meta">若要更換 HTML／zip 內容，請刪除此篇後重新上傳（同 slug 可重建）。</p>
 		<p><button type="submit">儲存</button></p>
 	</form>
 	<script src="/static/js/visibility-password.js" defer></script>
+	if llmEnabled || a.ID > 0 {
+		<script src="/static/js/ai-seo.js" defer></script>
+	}
 	<form method="post" action={ "/admin/" + strconv.FormatInt(a.ID, 10) + "/delete" } onsubmit="return confirm('確定刪除？上傳檔案也會一併移除');">
 		<input type="hidden" name="_csrf" value={ csrfToken }/>
 		<p><button type="submit">刪除此篇</button></p>
@@ -271,8 +282,8 @@ templ HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnabl
 
 // seoShareFields is the shared SEO / social section for markdown and HTML upload forms.
 // Empty fields keep automatic public fallbacks (title / body clip / no OG image).
-// allowAI: markdown forms only. llmEnabled: show the generate button vs “not configured” hint.
-// When allowAI is false (html_upload), omit all AI SEO UI — no false “missing env” message.
+// allowAI + llmEnabled: show AI SEO button or “not configured” hint.
+// OG generate needs a saved article id (a.ID > 0); no LLM key required.
 templ seoShareFields(a *model.Article, allowAI bool, llmEnabled bool) {
 	<fieldset class="seo-share-fields" id="seo-share-fields">
 		<legend>SEO / 分享</legend>
@@ -296,8 +307,18 @@ templ seoShareFields(a *model.Article, allowAI bool, llmEnabled bool) {
 					<ul id="ai-seo-outline-list"></ul>
 				</div>
 			} else {
-				<p class="meta">AI 產生 SEO：未設定 <code>WIKIBUILD_LLM_*</code>，按鈕已停用（僅 Markdown 文章）。</p>
+				<p class="meta">AI 產生 SEO：未設定 <code>WIKIBUILD_LLM_*</code>，按鈕已停用。</p>
 			}
+		}
+		if a.ID > 0 {
+			<p class="ai-seo-actions">
+				<button type="button" id="ai-og-btn" class="ai-seo-btn"
+					data-endpoint={ "/admin/" + strconv.FormatInt(a.ID, 10) + "/ai/og" }>
+					產生 OG 圖
+				</button>
+				<span id="ai-og-status" class="meta" aria-live="polite"></span>
+			</p>
+			<p class="meta">依標題產生 1200×630 PNG 到媒體庫，並填入下方 OG 圖 URL（需按儲存才寫入文章）。</p>
 		}
 		<p>
 			<label>SEO 標題（可與顯示標題不同；空 = 用標題）<br/>
