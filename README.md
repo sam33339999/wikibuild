@@ -104,10 +104,14 @@ Protected 密碼比對優先序：**文章密碼 > 全站預設密碼**。簽章
 
 ```
 GET  /                文章列表（分頁）
-GET  /:slug           文章內容
+GET  /search?q=       全文搜尋（published + public）
+GET  /archive         按年月封存索引
+GET  /archive/:year   某年文章
+GET  /archive/:year/:month  某月文章
+GET  /tag/:tag        標籤過濾
 GET  /media/:name     上傳的圖片（貼圖／拖拉）
-GET  /tag/:tag        標籤過濾（M5）
 GET  /feed            RSS（M6）
+GET  /:slug           文章內容
 GET  /:slug/unlock    protected 密碼驗證頁 / 處理
 ```
 
@@ -118,7 +122,7 @@ GET  /admin/login     登入頁
 POST /admin/login     登入處理
 POST /admin/logout    登出
 
-GET  /admin           文章列表（含 status / visibility 篩選）
+GET  /admin?q=        文章列表（可搜尋標題／內文）
 GET  /admin/new       新增 Markdown 文章
 POST /admin/new       建立文章
 GET  /admin/upload    上傳 HTML 上版頁
@@ -271,7 +275,7 @@ make cover             # 覆蓋率報告
    上傳 `.html`（含資產）→ `content/uploads/<slug>/`、`raw_mode` 切換（套佈景／原檔直送）
 5. **M4 內容豐富化**｜創作+閱讀 ✅ 已完成
    **圖片上傳簡易版（貼圖／拖拉）**、**雙向連結 `[[wikilinks]]` → 連回連結**、**預估閱讀時間**、**標籤管理（重命名／合併）**、**置頂／精選**
-6. **M5 發現與導航**｜發現
+6. **M5 發現與導航**｜發現 ✅ 已完成
    **全文搜尋（管理 + 讀者）**、**按日期封存**、標籤頁
 7. **M6 發布與分發**｜發布+分發
    **排程發布（背景排程器）**、**草稿預覽分享連結**、**導向管理**、**RSS/Atom/JSON Feed**、**sitemap + robots + SEO meta**、**留言（giscus/utterances）**

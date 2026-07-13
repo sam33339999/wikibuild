@@ -24,7 +24,7 @@ import (
 func articleApp(t *testing.T) (*fiber.App, store.Repository) {
 	t.Helper()
 	repo := inmem.New()
-	h := handler.NewArticleAdmin(repo, fakeHasher{})
+	h := handler.NewArticleAdmin(repo, fakeHasher{}, nil)
 	app := fiber.New()
 	app.Get("/admin", h.List)
 	app.Get("/admin/new", h.NewForm)
@@ -68,6 +68,27 @@ func TestArticleAdmin_Create(t *testing.T) {
 	require.Equal(t, "hello-world", items[0].Slug)
 	require.Equal(t, model.ArticleTypeMarkdown, items[0].Type)
 	require.Equal(t, []string{"go", "web"}, items[0].Tags)
+}
+
+func TestArticleAdmin_List_SearchQuery(t *testing.T) {
+	app, repo := articleApp(t)
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "go-post", Title: "Learning Go", Body: "intro", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+	})
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "rust-post", Title: "Rust Book", Body: "ownership", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+	})
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin?q=go", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "Learning Go")
+	require.NotContains(t, s, "Rust Book")
+	require.Contains(t, s, `name="q"`) // search form present
 }
 
 func TestArticleAdmin_Create_DuplicateSlug(t *testing.T) {

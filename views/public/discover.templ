@@ -1,0 +1,118 @@
+package public
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/sam33339999/wikibuild/internal/model"
+)
+
+// ArchiveMonth is one year/month bucket for the archive index.
+type ArchiveMonth struct {
+	Year  int
+	Month int
+	Count int
+}
+
+// Search renders the public search form and optional result list.
+templ Search(q string, items []model.Article) {
+	<nav class="site-nav">
+		<a href="/">首頁</a>
+		· <a href="/search">搜尋</a>
+		· <a href="/archive">封存</a>
+	</nav>
+	<h1>搜尋</h1>
+	<form method="get" action="/search">
+		<p>
+			<label>關鍵字
+				<input type="search" name="q" value={ q } autofocus/>
+			</label>
+			<button type="submit">搜尋</button>
+		</p>
+	</form>
+	if q != "" {
+		if len(items) == 0 {
+			<p>找不到與「{ q }」相符的文章。</p>
+		} else {
+			<p>找到 { strconv.Itoa(len(items)) } 篇：</p>
+			@articleSummaries(items)
+		}
+	}
+}
+
+// Tag renders the list of published public articles for one tag.
+templ Tag(tag string, items []model.Article) {
+	<nav class="site-nav">
+		<a href="/">首頁</a>
+		· <a href="/search">搜尋</a>
+		· <a href="/archive">封存</a>
+	</nav>
+	<h1>標籤：{ tag }</h1>
+	if len(items) == 0 {
+		<p>此標籤尚無已發布的公開文章。</p>
+	} else {
+		@articleSummaries(items)
+	}
+}
+
+// ArchiveIndex lists year/month links with article counts.
+templ ArchiveIndex(months []ArchiveMonth) {
+	<nav class="site-nav">
+		<a href="/">首頁</a>
+		· <a href="/search">搜尋</a>
+		· <a href="/archive">封存</a>
+	</nav>
+	<h1>封存</h1>
+	if len(months) == 0 {
+		<p>尚無可封存的文章。</p>
+	} else {
+		<ul class="archive-list">
+			for _, m := range months {
+				<li>
+					<a href={ fmt.Sprintf("/archive/%d/%02d", m.Year, m.Month) }>
+						{ strconv.Itoa(m.Year) } 年 { strconv.Itoa(m.Month) } 月
+					</a>
+					（{ strconv.Itoa(m.Count) }）
+				</li>
+			}
+		</ul>
+	}
+}
+
+// ArchivePeriod lists articles for a year or year/month period.
+templ ArchivePeriod(heading string, items []model.Article) {
+	<nav class="site-nav">
+		<a href="/">首頁</a>
+		· <a href="/search">搜尋</a>
+		· <a href="/archive">封存</a>
+	</nav>
+	<h1>{ heading }</h1>
+	<p><a href="/archive">← 全部封存</a></p>
+	if len(items) == 0 {
+		<p>此期間尚無文章。</p>
+	} else {
+		@articleSummaries(items)
+	}
+}
+
+// articleSummaries is a shared list of title + date links.
+templ articleSummaries(items []model.Article) {
+	for _, a := range items {
+		<article>
+			<h2><a href={ "/" + a.Slug }>{ a.Title }</a></h2>
+			if a.PublishedAt != nil {
+				<time>{ formatDate(a.PublishedAt) }</time>
+			}
+			if len(a.Tags) > 0 {
+				<p class="tags">
+					for i, t := range a.Tags {
+						if i > 0 {
+							{ ", " }
+						}
+						<a href={ "/tag/" + t }>{ t }</a>
+					}
+				</p>
+			}
+		</article>
+	}
+}

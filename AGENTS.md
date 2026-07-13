@@ -6,13 +6,13 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 `README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
 
-**M0–M4 are COMPLETE.** The app builds, runs against real Postgres, and covers admin login (bcrypt + HMAC session, CSRF, rate-limit), article CRUD with Goldmark (TOC + highlighting), public pages, visibility gate (public/protected/private), HTML static uploads, and M4 content enrichment (image paste/drag upload, `[[wikilinks]]` + backlinks, reading time, tag rename/merge, pinned).
+**M0–M5 are COMPLETE.** The app builds, runs against real Postgres, and covers admin login (bcrypt + HMAC session, CSRF, rate-limit), article CRUD with Goldmark (TOC + highlighting), public pages, visibility gate (public/protected/private), HTML static uploads, M4 content enrichment (image paste/drag, wikilinks + backlinks, reading time, tag rename/merge, pinned), and M5 discovery (search, archive, tag pages).
 
 Implemented:
 - `internal/model/` — domain types (`Article`, `User`), DB-agnostic; `Pinned` on Article
 - `internal/config/` — env loading (pure, `Load(lookup)`), 100% covered
 - `internal/clock/` — `Clock` interface (`Real` / `Fake`) for time injection
-- `internal/store/store.go` — `Repository` (Articles + Users + Settings + Tags) + typed errors (`ErrNotFound`, `ErrDuplicateSlug`, `ErrDuplicateUsername`, `ErrEmptySlug`, `ErrEmptyUsername`, `ErrEmptyTag`); `ListTags` / `RenameTag`
+- `internal/store/store.go` — `Repository` (Articles + Users + Settings + Tags) + typed errors; `ListTags` / `RenameTag`; `ListQuery.Search` / `Tag`
 - `internal/store/inmem/` — in-memory `Repository` for unit tests
 - `internal/store/sqlc/` — **sqlc-generated** (do not edit); regenerate with `make generate`
 - `internal/store/postgres/` — real `Repository` impl wrapping sqlc; integration-tested (testcontainers)
@@ -20,14 +20,14 @@ Implemented:
 - `internal/render/` — Goldmark markdown→HTML (GFM, linkify, chroma, TOC), `[[wikilinks]]`→md links, `ReadingTime`
 - `internal/media/` — image sniff/save (png/jpeg/gif/webp, 5MiB cap), safe path serving
 - `internal/gate/` — visibility decision logic (`Decide`) + protected password matching (`MatchPassword`), L2 pure
-- `internal/handler/` — Fiber handlers: `AdminAuth`, `ArticleAdmin`, `Public` (index + article + unlock + backlinks), `Settings`, `Upload` (HTML), `Media` (image paste upload), `Tags` (rename/merge); unit-tested against inmem
-- `internal/server/` — Fiber assembly: recover + CSRF + routes; static `/admin` routes before `/:slug`; `MediaDir` defaults to sibling of `ContentDir`
-- `views/` — templ: `layout/`, `admin/` (login, articles, upload, settings, tags), `public/` (index, article + reading time + backlinks)
+- `internal/handler/` — `AdminAuth`, `ArticleAdmin` (CRUD + admin `?q=` search + `PublishedAt` stamp), `Public` (index, article, unlock, backlinks, **Search / Tag / Archive**), `Settings`, `Upload`, `Media`, `Tags`
+- `internal/server/` — Fiber assembly; static discovery routes (`/search`, `/archive`, `/tag/:tag`, `/media/:name`) before `/:slug`
+- `views/` — templ: `layout/`, `admin/` (login, articles+search, upload, settings, tags), `public/` (index, article, search, archive, tag)
 - `db/` — `schema.sql`, migrations (incl. pinned), `queries/`, `embed.go`
 - `cmd/wikibuild/main.go` — config → pgxpool → pg repo → ensureAdmin → server → graceful shutdown
 - `compose.yaml` + `.env` mechanism; `Makefile` targets all work
 
-NOT yet present (M5+): full-text search UI, date archive, RSS/sitemap, scheduled publish, dark/light theme, static asset polish.
+NOT yet present (M6+): RSS/sitemap/SEO, scheduled publish, draft preview links, redirects, comments, dark/light theme, static asset polish.
 
 ## Toolchain (must be on PATH)
 

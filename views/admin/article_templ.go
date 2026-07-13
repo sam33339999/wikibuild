@@ -16,8 +16,8 @@ import (
 )
 
 // ArticleList renders the admin article table. Each row links to edit and
-// delete. draft rows are dimmed so published work stands out.
-func ArticleList(items []model.Article) templ.Component {
+// delete. q is the current search query (may be empty).
+func ArticleList(items []model.Article, q string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -38,105 +38,135 @@ func ArticleList(items []model.Article) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>文章列表</h1><p><a href=\"/admin/new\">＋ 新增文章</a> · <a href=\"/admin/upload\">上傳 HTML</a> · <a href=\"/admin/tags\">標籤管理</a> · <a href=\"/admin/settings\">設定</a></p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>文章列表</h1><p><a href=\"/admin/new\">＋ 新增文章</a> · <a href=\"/admin/upload\">上傳 HTML</a> · <a href=\"/admin/tags\">標籤管理</a> · <a href=\"/admin/settings\">設定</a></p><form method=\"get\" action=\"/admin\"><p><label>搜尋 <input type=\"search\" name=\"q\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var2 string
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(q)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 23, Col: 43}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" placeholder=\"標題或內文\"></label> <button type=\"submit\">搜尋</button> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if q != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<a href=\"/admin\">清除</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</p></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if len(items) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p>尚無文章。</p>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
+			if q != "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p>找不到相符的文章。</p>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<p>尚無文章。</p>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<table><thead><tr><th>標題</th><th>slug</th><th>狀態</th><th>可見性</th><th></th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<table><thead><tr><th>標題</th><th>slug</th><th>狀態</th><th>可見性</th><th></th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, a := range items {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<tr><td>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var2 string
-				templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(a.Title)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 30, Col: 19}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</td><td><code>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<tr><td>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var3 string
-				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(a.Slug)
+				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(a.Title)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 31, Col: 24}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 45, Col: 19}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</code></td><td>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</td><td><code>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var4 string
-				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(string(a.Status))
+				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(a.Slug)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 32, Col: 28}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 46, Col: 24}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</td><td>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</code></td><td>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var5 string
-				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(string(a.Visibility))
+				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(string(a.Status))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 33, Col: 32}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 47, Col: 28}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</td><td><a href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</td><td>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var6 templ.SafeURL
-				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs("/admin/" + strconv.FormatInt(a.ID, 10) + "/edit")
+				var templ_7745c5c3_Var6 string
+				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(string(a.Visibility))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 35, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 48, Col: 32}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\">編輯</a><form method=\"post\" action=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</td><td><a href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var7 templ.SafeURL
-				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs("/admin/" + strconv.FormatInt(a.ID, 10) + "/delete")
+				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinURLErrs("/admin/" + strconv.FormatInt(a.ID, 10) + "/edit")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 36, Col: 87}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 50, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" style=\"display:inline\"><button type=\"submit\">刪除</button></form></td></tr>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\">編輯</a><form method=\"post\" action=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var8 templ.SafeURL
+				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinURLErrs("/admin/" + strconv.FormatInt(a.ID, 10) + "/delete")
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 51, Col: 87}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" style=\"display:inline\"><button type=\"submit\">刪除</button></form></td></tr>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</tbody></table>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</tbody></table>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -164,150 +194,150 @@ func ArticleForm(action string, a *model.Article, csrfToken string) templ.Compon
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var8 == nil {
-			templ_7745c5c3_Var8 = templ.NopComponent
+		templ_7745c5c3_Var9 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var9 == nil {
+			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<h1>編輯文章</h1><p><a href=\"/admin\">← 文章列表</a></p><form method=\"post\" action=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<h1>編輯文章</h1><p><a href=\"/admin\">← 文章列表</a></p><form method=\"post\" action=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var9 templ.SafeURL
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(action)
+		var templ_7745c5c3_Var10 templ.SafeURL
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(action)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 53, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 68, Col: 36}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\"><input type=\"hidden\" name=\"_csrf\" value=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 54, Col: 53}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"><p><label>slug<br><input name=\"slug\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\"><input type=\"hidden\" name=\"_csrf\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Slug)
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 56, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 69, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" required></label></p><p><label>標題<br><input name=\"title\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"><p><label>slug<br><input name=\"slug\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Title)
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Slug)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 59, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 71, Col: 52}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" required></label></p><p><label>內文（Markdown）— 可貼上或拖拉圖片<br><textarea id=\"body\" name=\"body\" rows=\"20\" cols=\"80\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\" required></label></p><p><label>標題<br><input name=\"title\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(a.Body)
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 63, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 74, Col: 56}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</textarea></label> <span id=\"media-status\" style=\"display:block;color:#666;font-size:0.9em\"></span></p><p><label>標籤（逗號分隔）<br><input name=\"tags\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" required></label></p><p><label>內文（Markdown）— 可貼上或拖拉圖片<br><textarea id=\"body\" name=\"body\" rows=\"20\" cols=\"80\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 string
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(strings.Join(a.Tags, ", "))
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(a.Body)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 68, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 78, Col: 64}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"></label></p><p><label>狀態 <select name=\"status\"><option value=\"draft\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</textarea></label> <span id=\"media-status\" style=\"display:block;color:#666;font-size:0.9em\"></span></p><p><label>標籤（逗號分隔）<br><input name=\"tags\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue(strings.Join(a.Tags, ", "))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 83, Col: 92}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\"></label></p><p><label>狀態 <select name=\"status\"><option value=\"draft\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if a.Status == model.StatusDraft {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, " selected")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, ">draft</option> <option value=\"published\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if a.Status == model.StatusPublished {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, " selected")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, ">published</option></select></label></p><p><label>可見性 <select name=\"visibility\"><option value=\"public\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		if a.Visibility == model.VisibilityPublic {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, ">public</option> <option value=\"protected\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, ">draft</option> <option value=\"published\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if a.Visibility == model.VisibilityProtected {
+		if a.Status == model.StatusPublished {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, ">protected</option> <option value=\"private\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, ">published</option></select></label></p><p><label>可見性 <select name=\"visibility\"><option value=\"public\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if a.Visibility == model.VisibilityPrivate {
+		if a.Visibility == model.VisibilityPublic {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, ">private</option></select></label></p><p><label><input name=\"pinned\" type=\"checkbox\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, ">public</option> <option value=\"protected\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if a.Pinned {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, " checked")
+		if a.Visibility == model.VisibilityProtected {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "> 置頂</label></p><p><label>protected 密碼（留空用全站預設；編輯時留空=保留原密碼）<br><input name=\"password\" type=\"password\" autocomplete=\"new-password\"></label></p><p><button type=\"submit\">儲存</button></p></form><script>\n\t(function () {\n\t\tvar ta = document.getElementById('body');\n\t\tvar status = document.getElementById('media-status');\n\t\tvar csrf = document.querySelector('input[name=\"_csrf\"]');\n\t\tif (!ta || !csrf) return;\n\n\t\tfunction setStatus(msg) { if (status) status.textContent = msg || ''; }\n\n\t\tfunction insertAtCursor(text) {\n\t\t\tvar start = ta.selectionStart, end = ta.selectionEnd;\n\t\t\tvar val = ta.value;\n\t\t\tta.value = val.slice(0, start) + text + val.slice(end);\n\t\t\tvar pos = start + text.length;\n\t\t\tta.selectionStart = ta.selectionEnd = pos;\n\t\t\tta.focus();\n\t\t}\n\n\t\tfunction uploadFile(file) {\n\t\t\tif (!file || !file.type || file.type.indexOf('image/') !== 0) {\n\t\t\t\tsetStatus('僅支援圖片檔');\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tsetStatus('上傳中…');\n\t\t\tvar fd = new FormData();\n\t\t\tfd.append('file', file);\n\t\t\tfd.append('_csrf', csrf.value);\n\t\t\tfetch('/admin/media', {\n\t\t\t\tmethod: 'POST',\n\t\t\t\theaders: { 'X-Csrf-Token': csrf.value },\n\t\t\t\tbody: fd,\n\t\t\t\tcredentials: 'same-origin'\n\t\t\t}).then(function (r) {\n\t\t\t\tif (!r.ok) return r.json().then(function (j) { throw new Error(j.error || r.statusText); });\n\t\t\t\treturn r.json();\n\t\t\t}).then(function (j) {\n\t\t\t\tvar alt = (file.name || 'image').replace(/\\.[^.]+$/, '');\n\t\t\t\tinsertAtCursor('![' + alt + '](' + j.url + ')');\n\t\t\t\tsetStatus('已插入 ' + j.url);\n\t\t\t}).catch(function (e) {\n\t\t\t\tsetStatus('上傳失敗：' + (e.message || e));\n\t\t\t});\n\t\t}\n\n\t\tta.addEventListener('paste', function (e) {\n\t\t\tvar items = e.clipboardData && e.clipboardData.items;\n\t\t\tif (!items) return;\n\t\t\tfor (var i = 0; i < items.length; i++) {\n\t\t\t\tif (items[i].type.indexOf('image/') === 0) {\n\t\t\t\t\te.preventDefault();\n\t\t\t\t\tuploadFile(items[i].getAsFile());\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t});\n\n\t\tta.addEventListener('dragover', function (e) {\n\t\t\te.preventDefault();\n\t\t\tta.style.outline = '2px dashed #888';\n\t\t});\n\t\tta.addEventListener('dragleave', function () {\n\t\t\tta.style.outline = '';\n\t\t});\n\t\tta.addEventListener('drop', function (e) {\n\t\t\te.preventDefault();\n\t\t\tta.style.outline = '';\n\t\t\tvar files = e.dataTransfer && e.dataTransfer.files;\n\t\t\tif (!files || !files.length) return;\n\t\t\tfor (var i = 0; i < files.length; i++) {\n\t\t\t\tif (files[i].type.indexOf('image/') === 0) uploadFile(files[i]);\n\t\t\t}\n\t\t});\n\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, ">protected</option> <option value=\"private\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if a.Visibility == model.VisibilityPrivate {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, ">private</option></select></label></p><p><label><input name=\"pinned\" type=\"checkbox\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if a.Pinned {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, " checked")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "> 置頂</label></p><p><label>protected 密碼（留空用全站預設；編輯時留空=保留原密碼）<br><input name=\"password\" type=\"password\" autocomplete=\"new-password\"></label></p><p><button type=\"submit\">儲存</button></p></form><script>\n\t(function () {\n\t\tvar ta = document.getElementById('body');\n\t\tvar status = document.getElementById('media-status');\n\t\tvar csrf = document.querySelector('input[name=\"_csrf\"]');\n\t\tif (!ta || !csrf) return;\n\n\t\tfunction setStatus(msg) { if (status) status.textContent = msg || ''; }\n\n\t\tfunction insertAtCursor(text) {\n\t\t\tvar start = ta.selectionStart, end = ta.selectionEnd;\n\t\t\tvar val = ta.value;\n\t\t\tta.value = val.slice(0, start) + text + val.slice(end);\n\t\t\tvar pos = start + text.length;\n\t\t\tta.selectionStart = ta.selectionEnd = pos;\n\t\t\tta.focus();\n\t\t}\n\n\t\tfunction uploadFile(file) {\n\t\t\tif (!file || !file.type || file.type.indexOf('image/') !== 0) {\n\t\t\t\tsetStatus('僅支援圖片檔');\n\t\t\t\treturn;\n\t\t\t}\n\t\t\tsetStatus('上傳中…');\n\t\t\tvar fd = new FormData();\n\t\t\tfd.append('file', file);\n\t\t\tfd.append('_csrf', csrf.value);\n\t\t\tfetch('/admin/media', {\n\t\t\t\tmethod: 'POST',\n\t\t\t\theaders: { 'X-Csrf-Token': csrf.value },\n\t\t\t\tbody: fd,\n\t\t\t\tcredentials: 'same-origin'\n\t\t\t}).then(function (r) {\n\t\t\t\tif (!r.ok) return r.json().then(function (j) { throw new Error(j.error || r.statusText); });\n\t\t\t\treturn r.json();\n\t\t\t}).then(function (j) {\n\t\t\t\tvar alt = (file.name || 'image').replace(/\\.[^.]+$/, '');\n\t\t\t\tinsertAtCursor('![' + alt + '](' + j.url + ')');\n\t\t\t\tsetStatus('已插入 ' + j.url);\n\t\t\t}).catch(function (e) {\n\t\t\t\tsetStatus('上傳失敗：' + (e.message || e));\n\t\t\t});\n\t\t}\n\n\t\tta.addEventListener('paste', function (e) {\n\t\t\tvar items = e.clipboardData && e.clipboardData.items;\n\t\t\tif (!items) return;\n\t\t\tfor (var i = 0; i < items.length; i++) {\n\t\t\t\tif (items[i].type.indexOf('image/') === 0) {\n\t\t\t\t\te.preventDefault();\n\t\t\t\t\tuploadFile(items[i].getAsFile());\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t}\n\t\t});\n\n\t\tta.addEventListener('dragover', function (e) {\n\t\t\te.preventDefault();\n\t\t\tta.style.outline = '2px dashed #888';\n\t\t});\n\t\tta.addEventListener('dragleave', function () {\n\t\t\tta.style.outline = '';\n\t\t});\n\t\tta.addEventListener('drop', function (e) {\n\t\t\te.preventDefault();\n\t\t\tta.style.outline = '';\n\t\t\tvar files = e.dataTransfer && e.dataTransfer.files;\n\t\t\tif (!files || !files.length) return;\n\t\t\tfor (var i = 0; i < files.length; i++) {\n\t\t\t\tif (files[i].type.indexOf('image/') === 0) uploadFile(files[i]);\n\t\t\t}\n\t\t});\n\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

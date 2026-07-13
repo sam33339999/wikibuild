@@ -68,7 +68,7 @@ func New(d Deps) *fiber.App {
 		Limiter: d.Limiter,
 		Clock:   d.Clock,
 	})
-	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher)
+	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir)
 	mediaH := handler.NewMedia(mediaDir(d))
@@ -103,10 +103,15 @@ func New(d Deps) *fiber.App {
 	admin.Post("/:id", articleAdmin.Update)
 	admin.Post("/:id/delete", articleAdmin.Delete)
 
-	// Public reader-facing pages (registered last; static /admin routes above
-	// take priority over the /:slug parameter route).
+	// Public reader-facing pages. Static discovery routes must register
+	// before /:slug so they are not captured as slugs.
 	pub := handler.NewPublic(d.Store, d.Signer, d.Hasher, d.SiteDefaultPass, d.ContentDir)
 	app.Get("/", pub.Index)
+	app.Get("/search", pub.Search)
+	app.Get("/archive", pub.ArchiveIndex)
+	app.Get("/archive/:year", pub.ArchiveYear)
+	app.Get("/archive/:year/:month", pub.ArchiveMonth)
+	app.Get("/tag/:tag", pub.Tag)
 	app.Get("/:slug", pub.Article)
 	app.Get("/:slug/unlock", pub.UnlockForm)
 	app.Post("/:slug/unlock", pub.UnlockSubmit)

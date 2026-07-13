@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/a-h/templ"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/csrf"
 	"github.com/sam33339999/wikibuild/internal/auth"
+	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/store"
 	adminviews "github.com/sam33339999/wikibuild/views/admin"
@@ -20,24 +22,32 @@ import (
 // ArticleAdmin handles admin article CRUD. It depends only on store.Repository
 // and auth.PasswordHasher so it is unit-tested against inmem with a fake
 // hasher. The protected-article password field is bcrypt-hashed on save.
+// clock stamps PublishedAt when an article first becomes published.
 type ArticleAdmin struct {
 	repo   store.Repository
 	hasher auth.PasswordHasher
+	clock  clock.Clock
 }
 
 // NewArticleAdmin builds an ArticleAdmin backed by the given repository.
-// hasher hashes per-article protected passwords.
-func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher) *ArticleAdmin {
-	return &ArticleAdmin{repo: repo, hasher: hasher}
+// hasher hashes per-article protected passwords. clk may be nil (falls back
+// to clock.Real) for older call sites/tests.
+func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher, clk clock.Clock) *ArticleAdmin {
+	if clk == nil {
+		clk = clock.Real{}
+	}
+	return &ArticleAdmin{repo: repo, hasher: hasher, clock: clk}
 }
 
 // List shows every article (newest first) for the admin overview.
+// Optional ?q= filters title/body via store search.
 func (h *ArticleAdmin) List(c fiber.Ctx) error {
-	items, _, err := h.repo.ListArticles(c.Context(), store.ListQuery{})
+	q := strings.TrimSpace(c.Query("q"))
+	items, _, err := h.repo.ListArticles(c.Context(), store.ListQuery{Search: q})
 	if err != nil {
 		return err
 	}
-	return renderPage(c, "文章列表", adminviews.ArticleList(items))
+	return renderPage(c, "文章列表", adminviews.ArticleList(items, q))
 }
 
 // NewForm renders a blank article form.
@@ -52,6 +62,7 @@ func (h *ArticleAdmin) Create(c fiber.Ctx) error {
 	a := articleFromForm(c)
 	a.Type = model.ArticleTypeMarkdown
 	a.Password = hashPasswordIfSet(c, h.hasher)
+	stampPublishedAt(&a, nil, h.clock.Now())
 
 	created, err := h.repo.CreateArticle(c.Context(), a)
 	if err != nil {
@@ -97,6 +108,7 @@ func (h *ArticleAdmin) Update(c fiber.Ctx) error {
 	updated.CreatedAt = existing.CreatedAt
 	// Empty password on edit means "keep current"; a non-empty value re-hashes.
 	updated.Password = keepOrHashPassword(c, h.hasher, existing.Password)
+	stampPublishedAt(&updated, &existing, h.clock.Now())
 
 	if _, err := h.repo.UpdateArticle(c.Context(), updated); err != nil {
 		if errors.Is(err, store.ErrDuplicateSlug) {
@@ -169,6 +181,21 @@ func keepOrHashPassword(c fiber.Ctx, h auth.PasswordHasher, existing string) str
 		return existing
 	}
 	return hash
+}
+
+// stampPublishedAt sets PublishedAt the first time status becomes published.
+// Existing timestamps are preserved on re-save; drafts clear the field.
+func stampPublishedAt(a *model.Article, existing *model.Article, now time.Time) {
+	if a.Status != model.StatusPublished {
+		a.PublishedAt = nil
+		return
+	}
+	if existing != nil && existing.PublishedAt != nil {
+		a.PublishedAt = existing.PublishedAt
+		return
+	}
+	t := now.UTC()
+	a.PublishedAt = &t
 }
 
 // parseTags splits a comma-separated tag string, trimming whitespace and

@@ -30,7 +30,13 @@ func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fak
 	dir := t.TempDir()
 	h := handler.NewPublic(repo, signer, fakeHasher{}, "sitedefault", dir)
 	app := fiber.New()
+	// Static public routes before /:slug (same order as server.New).
 	app.Get("/", h.Index)
+	app.Get("/search", h.Search)
+	app.Get("/archive", h.ArchiveIndex)
+	app.Get("/archive/:year", h.ArchiveYear)
+	app.Get("/archive/:year/:month", h.ArchiveMonth)
+	app.Get("/tag/:tag", h.Tag)
 	app.Get("/:slug", h.Article)
 	app.Get("/:slug/unlock", h.UnlockForm)
 	app.Post("/:slug/unlock", h.UnlockSubmit)
@@ -359,6 +365,139 @@ func TestPublic_Backlinks_ExcludeSelfAndNonPublic(t *testing.T) {
 	body, _ := io.ReadAll(resp.Body)
 	require.NotContains(t, string(body), "Secret", "private backlink must not show")
 }
+
+// --- M5: search, tag page, archive ---
+
+func TestPublic_Search_FindsPublishedPublicByTitleAndBody(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedArticle(t, repo, "go-intro", "Intro to Go", "language basics", model.StatusPublished, model.VisibilityPublic)
+	seedArticle(t, repo, "rust-tips", "Rust Tips", "memory safety", model.StatusPublished, model.VisibilityPublic)
+	seedArticle(t, repo, "go-draft", "Go Draft", "go secrets", model.StatusDraft, model.VisibilityPublic)
+	seedArticle(t, repo, "go-priv", "Go Private", "go hidden", model.StatusPublished, model.VisibilityPrivate)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/search?q=go", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "Intro to Go")
+	require.NotContains(t, s, "Rust Tips")
+	require.NotContains(t, s, "Go Draft")
+	require.NotContains(t, s, "Go Private")
+}
+
+func TestPublic_Search_EmptyQueryShowsForm(t *testing.T) {
+	app, _, _, _, _ := publicApp(t)
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/search", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	require.Contains(t, string(body), `<form`)
+	require.Contains(t, string(body), `name="q"`)
+}
+
+func TestPublic_Tag_ListsOnlyMatchingPublishedPublic(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	_, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "a", Title: "Go Post", Body: "x", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusPublished, Visibility: model.VisibilityPublic,
+		Tags: []string{"go", "web"}, PublishedAt: ptrTime(time.Unix(1_700_000_000, 0)),
+	})
+	require.NoError(t, err)
+	_, err = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "b", Title: "Rust Post", Body: "y", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusPublished, Visibility: model.VisibilityPublic,
+		Tags: []string{"rust"}, PublishedAt: ptrTime(time.Unix(1_700_000_000, 0)),
+	})
+	require.NoError(t, err)
+	_, err = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "c", Title: "Go Draft", Body: "z", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+		Tags: []string{"go"},
+	})
+	require.NoError(t, err)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/tag/go", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "Go Post")
+	require.Contains(t, s, "go") // tag name in heading
+	require.NotContains(t, s, "Rust Post")
+	require.NotContains(t, s, "Go Draft")
+}
+
+func TestPublic_ArchiveIndex_GroupsByYearMonth(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedDated(t, repo, "jan", "January", 2024, 1, 15)
+	seedDated(t, repo, "feb", "February", 2024, 2, 1)
+	seedDated(t, repo, "old", "Old Year", 2023, 12, 1)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/archive", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "/archive/2024/01")
+	require.Contains(t, s, "/archive/2024/02")
+	require.Contains(t, s, "/archive/2023/12")
+	// Newest year/month first.
+	require.Less(t, strings.Index(s, "2024/02"), strings.Index(s, "2024/01"))
+	require.Less(t, strings.Index(s, "2024/01"), strings.Index(s, "2023/12"))
+}
+
+func TestPublic_ArchiveMonth_ListsArticles(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedDated(t, repo, "jan-a", "Jan A", 2024, 1, 10)
+	seedDated(t, repo, "jan-b", "Jan B", 2024, 1, 20)
+	seedDated(t, repo, "feb", "Feb", 2024, 2, 1)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/archive/2024/01", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "Jan A")
+	require.Contains(t, s, "Jan B")
+	require.NotContains(t, s, "Feb")
+}
+
+func TestPublic_ArchiveYear_ListsMonthsAndArticles(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedDated(t, repo, "a", "A", 2024, 3, 1)
+	seedDated(t, repo, "b", "B", 2023, 3, 1)
+
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/archive/2024", nil))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "A")
+	require.NotContains(t, s, ">B<")
+}
+
+func TestPublic_ArchiveMonth_InvalidParams(t *testing.T) {
+	app, _, _, _, _ := publicApp(t)
+	for _, path := range []string{"/archive/notayear", "/archive/2024/13", "/archive/2024/00"} {
+		resp, err := app.Test(httptest.NewRequest(http.MethodGet, path, nil))
+		require.NoError(t, err)
+		require.Equal(t, http.StatusBadRequest, resp.StatusCode, path)
+	}
+}
+
+func seedDated(t *testing.T, repo *inmem.Store, slug, title string, year, month, day int) {
+	t.Helper()
+	pub := time.Date(year, time.Month(month), day, 12, 0, 0, 0, time.UTC)
+	_, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: slug, Title: title, Body: "body",
+		Type: model.ArticleTypeMarkdown, Status: model.StatusPublished,
+		Visibility: model.VisibilityPublic, PublishedAt: &pub,
+	})
+	require.NoError(t, err)
+}
+
+func ptrTime(t time.Time) *time.Time { return &t }
 
 func itoa(i int) string {
 	const digits = "0123456789"

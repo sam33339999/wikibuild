@@ -8,8 +8,8 @@ import (
 )
 
 // ArticleList renders the admin article table. Each row links to edit and
-// delete. draft rows are dimmed so published work stands out.
-templ ArticleList(items []model.Article) {
+// delete. q is the current search query (may be empty).
+templ ArticleList(items []model.Article, q string) {
 	<h1>文章列表</h1>
 	<p>
 		<a href="/admin/new">＋ 新增文章</a>
@@ -17,8 +17,23 @@ templ ArticleList(items []model.Article) {
 		· <a href="/admin/tags">標籤管理</a>
 		· <a href="/admin/settings">設定</a>
 	</p>
+	<form method="get" action="/admin">
+		<p>
+			<label>搜尋
+				<input type="search" name="q" value={ q } placeholder="標題或內文"/>
+			</label>
+			<button type="submit">搜尋</button>
+			if q != "" {
+				<a href="/admin">清除</a>
+			}
+		</p>
+	</form>
 	if len(items) == 0 {
-		<p>尚無文章。</p>
+		if q != "" {
+			<p>找不到相符的文章。</p>
+		} else {
+			<p>尚無文章。</p>
+		}
 	} else {
 		<table>
 			<thead>
