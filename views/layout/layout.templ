@@ -3,14 +3,50 @@
 // pages that need it.
 package layout
 
+// SEO holds optional head meta for public pages (feeds, OG, canonical).
+// Zero value means "no extra SEO tags".
+type SEO struct {
+	Description string
+	Canonical   string
+	Type        string // "website" or "article"
+	Image       string
+}
+
 // Page wraps page content in the shared HTML document. title sets <title>.
-templ Page(title string, content templ.Component) {
+// seo may be the zero value for admin pages.
+templ Page(title string, content templ.Component, seo SEO) {
 	<!doctype html>
 	<html lang="zh-Hant">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title }</title>
+			if seo.Description != "" {
+				<meta name="description" content={ seo.Description }/>
+				<meta property="og:description" content={ seo.Description }/>
+				<meta name="twitter:description" content={ seo.Description }/>
+			}
+			if seo.Canonical != "" {
+				<link rel="canonical" href={ seo.Canonical }/>
+				<meta property="og:url" content={ seo.Canonical }/>
+			}
+			<meta property="og:title" content={ title }/>
+			if seo.Type != "" {
+				<meta property="og:type" content={ seo.Type }/>
+			} else {
+				<meta property="og:type" content="website"/>
+			}
+			if seo.Image != "" {
+				<meta property="og:image" content={ seo.Image }/>
+				<meta name="twitter:card" content="summary_large_image"/>
+				<meta name="twitter:image" content={ seo.Image }/>
+			} else {
+				<meta name="twitter:card" content="summary"/>
+			}
+			<meta name="twitter:title" content={ title }/>
+			<link rel="alternate" type="application/rss+xml" title="RSS" href="/feed"/>
+			<link rel="alternate" type="application/atom+xml" title="Atom" href="/feed/atom"/>
+			<link rel="alternate" type="application/feed+json" title="JSON Feed" href="/feed.json"/>
 		</head>
 		<body>
 			@content

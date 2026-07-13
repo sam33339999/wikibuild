@@ -25,18 +25,29 @@ const (
 )
 
 type Article struct {
-	ID          int64
-	Slug        string
-	Title       string
-	Type        ArticleType
-	Status      Status
-	Visibility  Visibility
-	Password    string
-	RawMode     bool
-	Pinned      bool
-	Body        string
-	Tags        []string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	PublishedAt *time.Time
+	ID           int64
+	Slug         string
+	Title        string
+	Type         ArticleType
+	Status       Status
+	Visibility   Visibility
+	Password     string
+	RawMode      bool
+	Pinned       bool
+	Body         string
+	Tags         []string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	PublishedAt  *time.Time
+	PublishAt    *time.Time // scheduled publish; draft until due
+	PreviewToken string     // unlisted draft share link token
+}
+
+// Redirect is a permanent (301) path mapping, typically created when an
+// article slug changes so old URLs keep working.
+type Redirect struct {
+	ID        int64
+	FromPath  string
+	ToPath    string
+	CreatedAt time.Time
 }

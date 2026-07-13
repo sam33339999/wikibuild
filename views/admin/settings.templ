@@ -1,14 +1,43 @@
 package admin
 
-// Settings renders the site settings form. current is the stored default
-// protected password (empty means the env fallback is in effect).
-templ Settings(current string, csrfToken string) {
+// SettingsData is the current values for the settings form.
+type SettingsData struct {
+	DefaultProtectedPass string
+	CommentProvider      string
+	CommentRepo          string
+	CommentCategory      string
+}
+
+// Settings renders the site settings form.
+templ Settings(data SettingsData, csrfToken string) {
 	<h1>設定</h1>
+	<p><a href="/admin">← 文章列表</a></p>
 	<form method="post" action="/admin/settings">
 		<input type="hidden" name="_csrf" value={ csrfToken }/>
+		<h2>可見性</h2>
 		<p>
 			<label>全站預設 protected 密碼（留空則使用環境變數 WIKIBUILD_DEFAULT_PROTECTED_PASS）<br/>
-				<input name="default_protected_password" type="password" value={ current } autocomplete="off"/>
+				<input name="default_protected_password" type="password" value={ data.DefaultProtectedPass } autocomplete="off"/>
+			</label>
+		</p>
+		<h2>留言（giscus / utterances）</h2>
+		<p>
+			<label>提供者
+				<select name="comment_provider">
+					<option value="" selected?={ data.CommentProvider == "" }>關閉</option>
+					<option value="giscus" selected?={ data.CommentProvider == "giscus" }>giscus</option>
+					<option value="utterances" selected?={ data.CommentProvider == "utterances" }>utterances</option>
+				</select>
+			</label>
+		</p>
+		<p>
+			<label>GitHub repo（owner/repo）<br/>
+				<input name="comment_repo" value={ data.CommentRepo } placeholder="owner/repo"/>
+			</label>
+		</p>
+		<p>
+			<label>giscus category 名稱（utterances 可留空）<br/>
+				<input name="comment_category" value={ data.CommentCategory }/>
 			</label>
 		</p>
 		<p><button type="submit">儲存</button></p>

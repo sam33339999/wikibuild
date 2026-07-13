@@ -299,6 +299,41 @@ func TestRenameTag_MergeDedupes(t *testing.T) {
 	require.Equal(t, []string{"to"}, got2.Tags)
 }
 
+func TestPreviewTokenAndScheduleRoundTrip(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+	past := time.Now().UTC().Add(-time.Hour)
+	a := sampleArticle("sched")
+	a.Status = model.StatusDraft
+	a.PublishAt = &past
+	a.PreviewToken = "tok123abc"
+	created, err := repo.CreateArticle(ctx, a)
+	require.NoError(t, err)
+	require.Equal(t, "tok123abc", created.PreviewToken)
+	require.NotNil(t, created.PublishAt)
+
+	got, err := repo.GetArticleByPreviewToken(ctx, "tok123abc")
+	require.NoError(t, err)
+	require.Equal(t, created.ID, got.ID)
+
+	due, err := repo.ListDueScheduled(ctx, time.Now().UTC())
+	require.NoError(t, err)
+	require.NotEmpty(t, due)
+}
+
+func TestRedirects_Postgres(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+	_, err := repo.CreateRedirect(ctx, model.Redirect{FromPath: "/a", ToPath: "/b"})
+	require.NoError(t, err)
+	got, err := repo.GetRedirect(ctx, "/a")
+	require.NoError(t, err)
+	require.Equal(t, "/b", got.ToPath)
+	require.NoError(t, repo.DeleteRedirect(ctx, "/a"))
+	_, err = repo.GetRedirect(ctx, "/a")
+	require.ErrorIs(t, err, store.ErrNotFound)
+}
+
 func TestSettings_GetSetRoundTrip(t *testing.T) {
 	repo := NewTestRepo(t)
 	ctx := context.Background()

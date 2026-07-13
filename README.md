@@ -110,8 +110,13 @@ GET  /archive/:year   某年文章
 GET  /archive/:year/:month  某月文章
 GET  /tag/:tag        標籤過濾
 GET  /media/:name     上傳的圖片（貼圖／拖拉）
-GET  /feed            RSS（M6）
-GET  /:slug           文章內容
+GET  /feed            RSS 2.0
+GET  /feed/atom       Atom 1.0
+GET  /feed.json       JSON Feed 1.1
+GET  /sitemap.xml     sitemap
+GET  /robots.txt      robots
+GET  /preview/:token  草稿預覽分享連結（unlisted）
+GET  /:slug           文章內容（未知 slug 查 301 導向）
 GET  /:slug/unlock    protected 密碼驗證頁 / 處理
 ```
 
@@ -131,10 +136,13 @@ POST /admin/media     圖片上傳（回 JSON {url,name}，編輯器貼圖／拖
 GET  /admin/tags      標籤管理（列表／計數）
 POST /admin/tags/rename  標籤重新命名
 POST /admin/tags/merge   標籤合併
-GET  /admin/:id/edit  編輯（含切換 status / visibility / password / raw_mode / pinned）
-POST /admin/:id       更新
+GET  /admin/redirects 導向管理
+POST /admin/redirects 新增導向
+POST /admin/redirects/delete 刪除導向
+GET  /admin/:id/edit  編輯（含 status / visibility / password / raw_mode / pinned / 排程 / 預覽連結）
+POST /admin/:id       更新（slug 變更自動建 301）
 POST /admin/:id/delete 刪除
-GET  /admin/settings  全站設定（含預設 protected 密碼）
+GET  /admin/settings  全站設定（protected 密碼、留言 giscus/utterances）
 ```
 
 ## 開發
@@ -182,6 +190,8 @@ make run               # go run ./cmd/wikibuild（自動載入 .env）
 | `WIKIBUILD_SESSION_SECRET` | session HMAC 簽章金鑰 | — |
 | `WIKIBUILD_CONTENT_DIR` | 上傳內容目錄 | `./content/uploads` |
 | `WIKIBUILD_DEFAULT_PROTECTED_PASS` | protected 文章全站預設密碼 | — |
+| `WIKIBUILD_BASE_URL` | 站台絕對網址（feeds/sitemap/canonical，無尾隨 `/`） | — |
+| `WIKIBUILD_SITE_TITLE` | 站台／feed 標題 | `WikiBuild` |
 
 ### `.env` 機制
 
@@ -277,7 +287,7 @@ make cover             # 覆蓋率報告
    **圖片上傳簡易版（貼圖／拖拉）**、**雙向連結 `[[wikilinks]]` → 連回連結**、**預估閱讀時間**、**標籤管理（重命名／合併）**、**置頂／精選**
 6. **M5 發現與導航**｜發現 ✅ 已完成
    **全文搜尋（管理 + 讀者）**、**按日期封存**、標籤頁
-7. **M6 發布與分發**｜發布+分發
+7. **M6 發布與分發**｜發布+分發 ✅ 已完成
    **排程發布（背景排程器）**、**草稿預覽分享連結**、**導向管理**、**RSS/Atom/JSON Feed**、**sitemap + robots + SEO meta**、**留言（giscus/utterances）**
 8. **M7 前台體驗收尾**｜閱讀
    **深淺色主題切換**、佈景打磨、靜態資產、端到端測試 → v1.0 上線

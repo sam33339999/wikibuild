@@ -1,0 +1,47 @@
+package admin
+
+import "github.com/sam33339999/wikibuild/internal/model"
+
+// RedirectList renders admin redirect management.
+templ RedirectList(items []model.Redirect, csrfToken string) {
+	<h1>導向管理</h1>
+	<p><a href="/admin">← 文章列表</a></p>
+	<p>slug 變更時會自動建立 301。此頁可手動新增或刪除。</p>
+	<section>
+		<h2>新增導向</h2>
+		<form method="post" action="/admin/redirects">
+			<input type="hidden" name="_csrf" value={ csrfToken }/>
+			<p>
+				<label>來源路徑<br/><input name="from_path" placeholder="/old-slug" required/></label>
+			</p>
+			<p>
+				<label>目標路徑<br/><input name="to_path" placeholder="/new-slug" required/></label>
+			</p>
+			<p><button type="submit">新增</button></p>
+		</form>
+	</section>
+	if len(items) == 0 {
+		<p>尚無導向。</p>
+	} else {
+		<table>
+			<thead>
+				<tr><th>來源</th><th>目標</th><th></th></tr>
+			</thead>
+			<tbody>
+				for _, r := range items {
+					<tr>
+						<td><code>{ r.FromPath }</code></td>
+						<td><code>{ r.ToPath }</code></td>
+						<td>
+							<form method="post" action="/admin/redirects/delete" style="display:inline">
+								<input type="hidden" name="_csrf" value={ csrfToken }/>
+								<input type="hidden" name="from_path" value={ r.FromPath }/>
+								<button type="submit">刪除</button>
+							</form>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}

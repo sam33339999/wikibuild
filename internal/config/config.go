@@ -22,6 +22,7 @@ const (
 	defaultHost       = "127.0.0.1" // 本機 only; set WIKIBUILD_HOST=0.0.0.0 to expose
 	defaultPort       = 8080
 	defaultContentDir = "./content/uploads"
+	defaultSiteTitle  = "WikiBuild"
 
 	// minSessionSecretBytes is the minimum secret length for safe HMAC
 	// session signing. 16 bytes (128 bits) is the conservative floor.
@@ -44,6 +45,8 @@ type Config struct {
 	SessionSecret        string
 	ContentDir           string
 	DefaultProtectedPass string
+	BaseURL              string // absolute origin for feeds/sitemap/SEO
+	SiteTitle            string // feed channel title
 }
 
 // Load reads settings via lookup, applies defaults, and validates required
@@ -51,9 +54,10 @@ type Config struct {
 // problem it found.
 func Load(lookup LookupFunc) (Config, error) {
 	cfg := Config{
-		Host:       defaultHost,
-		Port:       defaultPort,
+		Host:      defaultHost,
+		Port:      defaultPort,
 		ContentDir: defaultContentDir,
+		SiteTitle: defaultSiteTitle,
 	}
 
 	cfg.DatabaseURL, _ = lookup("DATABASE_URL")
@@ -61,6 +65,7 @@ func Load(lookup LookupFunc) (Config, error) {
 	cfg.AdminPass, _ = lookup("WIKIBUILD_ADMIN_PASS")
 	cfg.SessionSecret, _ = lookup("WIKIBUILD_SESSION_SECRET")
 	cfg.DefaultProtectedPass, _ = lookup("WIKIBUILD_DEFAULT_PROTECTED_PASS")
+	cfg.BaseURL, _ = lookup("WIKIBUILD_BASE_URL")
 
 	if v, ok := lookup("WIKIBUILD_HOST"); ok && v != "" {
 		cfg.Host = v
@@ -74,6 +79,9 @@ func Load(lookup LookupFunc) (Config, error) {
 	}
 	if v, ok := lookup("WIKIBUILD_CONTENT_DIR"); ok && v != "" {
 		cfg.ContentDir = v
+	}
+	if v, ok := lookup("WIKIBUILD_SITE_TITLE"); ok && v != "" {
+		cfg.SiteTitle = v
 	}
 
 	var errs []error

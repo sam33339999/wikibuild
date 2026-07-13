@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/sam33339999/wikibuild/internal/model"
 )
@@ -14,6 +15,7 @@ var (
 	ErrEmptySlug         = errors.New("slug is empty")
 	ErrEmptyUsername     = errors.New("username is empty")
 	ErrEmptyTag          = errors.New("tag name is empty")
+	ErrEmptyPath         = errors.New("path is empty")
 )
 
 // TagCount is one distinct tag and how many articles carry it.
@@ -27,17 +29,22 @@ type Repository interface {
 	CreateArticle(ctx context.Context, a model.Article) (model.Article, error)
 	GetArticle(ctx context.Context, id int64) (model.Article, error)
 	GetArticleBySlug(ctx context.Context, slug string) (model.Article, error)
+	GetArticleByPreviewToken(ctx context.Context, token string) (model.Article, error)
 	UpdateArticle(ctx context.Context, a model.Article) (model.Article, error)
 	DeleteArticle(ctx context.Context, id int64) error
 	ListArticles(ctx context.Context, q ListQuery) (items []model.Article, total int, err error)
+	// ListDueScheduled returns drafts whose PublishAt is non-nil and <= now.
+	ListDueScheduled(ctx context.Context, now time.Time) ([]model.Article, error)
 
 	// Tags (aggregate over article.tags; no separate tags table).
-	// ListTags returns distinct tags sorted by name, each with an article count.
-	// RenameTag renames from→to on every article that has from (merge-safe:
-	// if an article already has to, from is dropped without duplicating).
-	// Returns the number of articles updated. Empty names yield ErrEmptyTag.
 	ListTags(ctx context.Context) ([]TagCount, error)
 	RenameTag(ctx context.Context, from, to string) (int, error)
+
+	// Redirects (slug change 301s). FromPath/ToPath are absolute paths like /old.
+	CreateRedirect(ctx context.Context, r model.Redirect) (model.Redirect, error)
+	GetRedirect(ctx context.Context, fromPath string) (model.Redirect, error)
+	ListRedirects(ctx context.Context) ([]model.Redirect, error)
+	DeleteRedirect(ctx context.Context, fromPath string) error
 
 	// Users
 	CreateUser(ctx context.Context, u model.User) (model.User, error)

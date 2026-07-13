@@ -7,10 +7,18 @@ import (
 	"github.com/sam33339999/wikibuild/internal/render"
 )
 
+// CommentConfig drives giscus / utterances embeds on public articles.
+// Provider empty disables comments.
+type CommentConfig struct {
+	Provider string // "", "giscus", "utterances"
+	Repo     string // owner/repo
+	Category string // giscus category name
+}
+
 // Article renders a single article: title, meta (date, reading time),
 // optional table of contents, and the rendered body. html is trusted
 // (produced by our renderer which escapes raw HTML), inserted via templ.Raw.
-templ Article(a model.Article, html string, toc []render.Heading, readingMinutes int, backlinks []model.Article) {
+templ Article(a model.Article, html string, toc []render.Heading, readingMinutes int, backlinks []model.Article, comments CommentConfig) {
 	<article>
 		<h1>{ a.Title }</h1>
 		if a.PublishedAt != nil || readingMinutes > 0 {
@@ -20,6 +28,16 @@ templ Article(a model.Article, html string, toc []render.Heading, readingMinutes
 				}
 				if readingMinutes > 0 {
 					<span>· { strconv.Itoa(readingMinutes) } 分鐘閱讀</span>
+				}
+			</p>
+		}
+		if len(a.Tags) > 0 {
+			<p class="tags">
+				for i, t := range a.Tags {
+					if i > 0 {
+						{ ", " }
+					}
+					<a href={ "/tag/" + t }>{ t }</a>
 				}
 			</p>
 		}
@@ -45,6 +63,37 @@ templ Article(a model.Article, html string, toc []render.Heading, readingMinutes
 					}
 				</ul>
 			</nav>
+		}
+		if comments.Provider != "" && comments.Repo != "" {
+			<section class="comments">
+				<h2>留言</h2>
+				if comments.Provider == "giscus" {
+					<script src="https://giscus.app/client.js"
+						data-repo={ comments.Repo }
+						data-repo-id=""
+						data-category={ comments.Category }
+						data-category-id=""
+						data-mapping="pathname"
+						data-strict="0"
+						data-reactions-enabled="1"
+						data-emit-metadata="0"
+						data-input-position="bottom"
+						data-theme="preferred_color_scheme"
+						data-lang="zh-TW"
+						crossorigin="anonymous"
+						async>
+					</script>
+				}
+				if comments.Provider == "utterances" {
+					<script src="https://utteranc.es/client.js"
+						repo={ comments.Repo }
+						issue-term="pathname"
+						theme="preferred-color-scheme"
+						crossorigin="anonymous"
+						async>
+					</script>
+				}
+			</section>
 		}
 	</article>
 }

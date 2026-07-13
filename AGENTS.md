@@ -6,28 +6,24 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 `README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
 
-**M0–M5 are COMPLETE.** The app builds, runs against real Postgres, and covers admin login (bcrypt + HMAC session, CSRF, rate-limit), article CRUD with Goldmark (TOC + highlighting), public pages, visibility gate (public/protected/private), HTML static uploads, M4 content enrichment (image paste/drag, wikilinks + backlinks, reading time, tag rename/merge, pinned), and M5 discovery (search, archive, tag pages).
+**M0–M6 are COMPLETE.** The app builds, runs against real Postgres, and covers admin login, article CRUD, visibility gate, HTML uploads, M4 enrichment, M5 discovery, and M6 publish/distribute (schedule, preview links, redirects, feeds, sitemap/robots/SEO, giscus/utterances).
 
 Implemented:
-- `internal/model/` — domain types (`Article`, `User`), DB-agnostic; `Pinned` on Article
-- `internal/config/` — env loading (pure, `Load(lookup)`), 100% covered
-- `internal/clock/` — `Clock` interface (`Real` / `Fake`) for time injection
-- `internal/store/store.go` — `Repository` (Articles + Users + Settings + Tags) + typed errors; `ListTags` / `RenameTag`; `ListQuery.Search` / `Tag`
-- `internal/store/inmem/` — in-memory `Repository` for unit tests
-- `internal/store/sqlc/` — **sqlc-generated** (do not edit); regenerate with `make generate`
-- `internal/store/postgres/` — real `Repository` impl wrapping sqlc; integration-tested (testcontainers)
-- `internal/auth/` — `PasswordHasher` (bcrypt), HMAC `Signer` (session tokens), `LoginLimiter` (brute-force protection)
-- `internal/render/` — Goldmark markdown→HTML (GFM, linkify, chroma, TOC), `[[wikilinks]]`→md links, `ReadingTime`
-- `internal/media/` — image sniff/save (png/jpeg/gif/webp, 5MiB cap), safe path serving
-- `internal/gate/` — visibility decision logic (`Decide`) + protected password matching (`MatchPassword`), L2 pure
-- `internal/handler/` — `AdminAuth`, `ArticleAdmin` (CRUD + admin `?q=` search + `PublishedAt` stamp), `Public` (index, article, unlock, backlinks, **Search / Tag / Archive**), `Settings`, `Upload`, `Media`, `Tags`
-- `internal/server/` — Fiber assembly; static discovery routes (`/search`, `/archive`, `/tag/:tag`, `/media/:name`) before `/:slug`
-- `views/` — templ: `layout/`, `admin/` (login, articles+search, upload, settings, tags), `public/` (index, article, search, archive, tag)
-- `db/` — `schema.sql`, migrations (incl. pinned), `queries/`, `embed.go`
-- `cmd/wikibuild/main.go` — config → pgxpool → pg repo → ensureAdmin → server → graceful shutdown
-- `compose.yaml` + `.env` mechanism; `Makefile` targets all work
+- `internal/model/` — `Article` (+ `PublishAt`, `PreviewToken`, `Pinned`), `User`, `Redirect`
+- `internal/config/` — env loading; `BaseURL`, `SiteTitle`
+- `internal/clock/` — `Clock` interface (`Real` / `Fake`)
+- `internal/store/` — Articles + Tags + Redirects + Settings + Users; `ListDueScheduled`, preview token lookup
+- `internal/store/inmem/` + `postgres/` (testcontainers L4)
+- `internal/auth/`, `gate/`, `render/`, `media/`
+- `internal/feed/` — RSS / Atom / JSON Feed / sitemap / robots (pure L1)
+- `internal/scheduler/` — `Publisher.Tick` for due drafts
+- `internal/handler/` — auth, articles (schedule + preview token + slug→301), public (search/archive/tag/preview/SEO/comments), syndication, redirects admin, settings (comments), upload, media, tags
+- `internal/server/` — static routes before `/:slug` (feeds, preview, archive, …)
+- `views/` — admin (articles, tags, redirects, settings+comments), public (article+comments, search, archive)
+- `db/` — migrations through `000004_m6_publish` (publish_at, preview_token, redirects)
+- `cmd/wikibuild/main.go` — ensureAdmin + background publisher ticker + graceful shutdown
 
-NOT yet present (M6+): RSS/sitemap/SEO, scheduled publish, draft preview links, redirects, comments, dark/light theme, static asset polish.
+NOT yet present (M7): dark/light theme, layout polish, static assets, E2E.
 
 ## Toolchain (must be on PATH)
 

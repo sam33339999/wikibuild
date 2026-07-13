@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/store"
@@ -21,6 +22,9 @@ type Store struct {
 	usersByName map[string]int64
 
 	settings map[string]string
+
+	nextRedirectID int64
+	redirects      map[string]model.Redirect // from_path → redirect
 }
 
 func New() *Store {
@@ -29,6 +33,7 @@ func New() *Store {
 		bySlug:      make(map[string]int64),
 		usersByID:   make(map[int64]model.User),
 		usersByName: make(map[string]int64),
+		redirects:   make(map[string]model.Redirect),
 	}
 }
 
@@ -66,6 +71,86 @@ func (s *Store) GetArticleBySlug(ctx context.Context, slug string) (model.Articl
 		return model.Article{}, store.ErrNotFound
 	}
 	return s.byID[id], nil
+}
+
+func (s *Store) GetArticleByPreviewToken(ctx context.Context, token string) (model.Article, error) {
+	if token == "" {
+		return model.Article{}, store.ErrNotFound
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, a := range s.byID {
+		if a.PreviewToken == token {
+			return a, nil
+		}
+	}
+	return model.Article{}, store.ErrNotFound
+}
+
+func (s *Store) ListDueScheduled(ctx context.Context, now time.Time) ([]model.Article, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []model.Article
+	for _, a := range s.byID {
+		if a.Status != model.StatusDraft || a.PublishAt == nil {
+			continue
+		}
+		if !a.PublishAt.After(now) {
+			out = append(out, a)
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].PublishAt.Before(*out[j].PublishAt)
+	})
+	return out, nil
+}
+
+func (s *Store) CreateRedirect(ctx context.Context, r model.Redirect) (model.Redirect, error) {
+	if r.FromPath == "" || r.ToPath == "" {
+		return model.Redirect{}, store.ErrEmptyPath
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if existing, ok := s.redirects[r.FromPath]; ok {
+		existing.ToPath = r.ToPath
+		s.redirects[r.FromPath] = existing
+		return existing, nil
+	}
+	s.nextRedirectID++
+	r.ID = s.nextRedirectID
+	s.redirects[r.FromPath] = r
+	return r, nil
+}
+
+func (s *Store) GetRedirect(ctx context.Context, fromPath string) (model.Redirect, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	r, ok := s.redirects[fromPath]
+	if !ok {
+		return model.Redirect{}, store.ErrNotFound
+	}
+	return r, nil
+}
+
+func (s *Store) ListRedirects(ctx context.Context) ([]model.Redirect, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]model.Redirect, 0, len(s.redirects))
+	for _, r := range s.redirects {
+		out = append(out, r)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID > out[j].ID })
+	return out, nil
+}
+
+func (s *Store) DeleteRedirect(ctx context.Context, fromPath string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.redirects[fromPath]; !ok {
+		return store.ErrNotFound
+	}
+	delete(s.redirects, fromPath)
+	return nil
 }
 
 func (s *Store) UpdateArticle(ctx context.Context, a model.Article) (model.Article, error) {

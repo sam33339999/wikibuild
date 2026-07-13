@@ -9,9 +9,7 @@ import (
 	adminviews "github.com/sam33339999/wikibuild/views/admin"
 )
 
-// Settings manages site-wide settings (currently the default protected
-// password). It depends only on store.Repository so it is unit-tested against
-// inmem.
+// Settings manages site-wide settings (protected password + comments).
 type Settings struct {
 	repo store.Repository
 }
@@ -21,21 +19,38 @@ func NewSettings(repo store.Repository) *Settings {
 	return &Settings{repo: repo}
 }
 
-// Form renders the settings page with the current default protected password.
+// Form renders the settings page.
 func (h *Settings) Form(c fiber.Ctx) error {
-	current, err := h.repo.GetSetting(c.Context(), SettingDefaultProtectedPass)
+	pass, err := h.repo.GetSetting(c.Context(), SettingDefaultProtectedPass)
 	if err != nil {
 		return err
 	}
-	return renderPage(c, "設定", adminviews.Settings(current, csrf.TokenFromContext(c)))
+	provider, _ := h.repo.GetSetting(c.Context(), SettingCommentProvider)
+	repo, _ := h.repo.GetSetting(c.Context(), SettingCommentRepo)
+	cat, _ := h.repo.GetSetting(c.Context(), SettingCommentCategory)
+	data := adminviews.SettingsData{
+		DefaultProtectedPass: pass,
+		CommentProvider:      provider,
+		CommentRepo:          repo,
+		CommentCategory:      cat,
+	}
+	return renderPage(c, "設定", adminviews.Settings(data, csrf.TokenFromContext(c)))
 }
 
-// Save updates the default protected password.
+// Save updates site-wide settings from the form.
 func (h *Settings) Save(c fiber.Ctx) error {
-	// Clone: fasthttp reuses request buffers, so values stored beyond the
-	// request must be copied.
-	value := strings.Clone(c.FormValue("default_protected_password"))
-	if err := h.repo.SetSetting(c.Context(), SettingDefaultProtectedPass, value); err != nil {
+	// Clone: fasthttp reuses request buffers.
+	pass := strings.Clone(c.FormValue("default_protected_password"))
+	if err := h.repo.SetSetting(c.Context(), SettingDefaultProtectedPass, pass); err != nil {
+		return err
+	}
+	if err := h.repo.SetSetting(c.Context(), SettingCommentProvider, strings.Clone(c.FormValue("comment_provider"))); err != nil {
+		return err
+	}
+	if err := h.repo.SetSetting(c.Context(), SettingCommentRepo, strings.Clone(strings.TrimSpace(c.FormValue("comment_repo")))); err != nil {
+		return err
+	}
+	if err := h.repo.SetSetting(c.Context(), SettingCommentCategory, strings.Clone(strings.TrimSpace(c.FormValue("comment_category")))); err != nil {
 		return err
 	}
 	return c.Redirect().To("/admin/settings")

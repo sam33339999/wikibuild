@@ -6,20 +6,29 @@ package sqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	CountArticles(ctx context.Context, arg CountArticlesParams) (int64, error)
 	CreateArticle(ctx context.Context, arg CreateArticleParams) (Article, error)
+	CreateRedirect(ctx context.Context, arg CreateRedirectParams) (Redirect, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteArticle(ctx context.Context, id int64) error
+	DeleteRedirect(ctx context.Context, fromPath string) error
 	GetArticle(ctx context.Context, id int64) (Article, error)
+	GetArticleByPreviewToken(ctx context.Context, previewToken string) (Article, error)
 	GetArticleBySlug(ctx context.Context, slug string) (Article, error)
+	GetRedirect(ctx context.Context, fromPath string) (Redirect, error)
 	GetSetting(ctx context.Context, key string) (string, error)
 	GetUserByUsername(ctx context.Context, username string) (User, error)
 	// Optional filters: pass NULL (Valid=false) to skip status/visibility/tag,
 	// pass '' search to skip full-text search. limit=0 means "no limit".
 	ListArticles(ctx context.Context, arg ListArticlesParams) ([]Article, error)
+	// Drafts whose scheduled publish time has arrived (or is past).
+	ListDueScheduled(ctx context.Context, now pgtype.Timestamptz) ([]Article, error)
+	ListRedirects(ctx context.Context) ([]Redirect, error)
 	// Upsert: insert the key or update its value if it already exists.
 	SetSetting(ctx context.Context, arg SetSettingParams) (string, error)
 	UpdateArticle(ctx context.Context, arg UpdateArticleParams) (Article, error)

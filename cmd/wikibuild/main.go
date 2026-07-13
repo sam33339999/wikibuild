@@ -21,6 +21,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/config"
 	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/scheduler"
 	"github.com/sam33339999/wikibuild/internal/server"
 	"github.com/sam33339999/wikibuild/internal/store"
 	"github.com/sam33339999/wikibuild/internal/store/postgres"
@@ -73,7 +74,14 @@ func run() error {
 		Clock:           clk,
 		SiteDefaultPass: cfg.DefaultProtectedPass,
 		ContentDir:      cfg.ContentDir,
+		BaseURL:         cfg.BaseURL,
+		SiteTitle:       cfg.SiteTitle,
 	})
+
+	// Background publisher for scheduled drafts.
+	pubCtx, pubCancel := context.WithCancel(context.Background())
+	defer pubCancel()
+	go runPublisher(pubCtx, repo, clk)
 
 	// Graceful shutdown on SIGINT / SIGTERM.
 	errCh := make(chan error, 1)
@@ -87,10 +95,37 @@ func run() error {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	select {
 	case err := <-errCh:
+		pubCancel()
 		return err
 	case <-sigCh:
 		log.Println("wikibuild: shutting down")
+		pubCancel()
 		return app.ShutdownWithTimeout(10 * time.Second)
+	}
+}
+
+// runPublisher ticks the scheduled-publish scheduler until ctx is cancelled.
+func runPublisher(ctx context.Context, repo store.Repository, clk clock.Clock) {
+	p := &scheduler.Publisher{Repo: repo, Clock: clk}
+	// Immediate pass on boot so overdue drafts go live without waiting.
+	if n, err := p.Tick(ctx); err != nil {
+		log.Printf("wikibuild: publisher: %v", err)
+	} else if n > 0 {
+		log.Printf("wikibuild: publisher: published %d scheduled article(s)", n)
+	}
+	t := time.NewTicker(scheduler.DefaultInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			if n, err := p.Tick(ctx); err != nil {
+				log.Printf("wikibuild: publisher: %v", err)
+			} else if n > 0 {
+				log.Printf("wikibuild: publisher: published %d scheduled article(s)", n)
+			}
+		}
 	}
 }
 

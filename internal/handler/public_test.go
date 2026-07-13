@@ -28,7 +28,7 @@ func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fak
 	fc := clock.NewFake(time.Unix(1_700_000_000, 0))
 	signer := auth.NewSigner("supersecretkey1234", fc)
 	dir := t.TempDir()
-	h := handler.NewPublic(repo, signer, fakeHasher{}, "sitedefault", dir)
+	h := handler.NewPublic(repo, signer, fakeHasher{}, "sitedefault", dir, "https://ex.com")
 	app := fiber.New()
 	// Static public routes before /:slug (same order as server.New).
 	app.Get("/", h.Index)
@@ -37,6 +37,7 @@ func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fak
 	app.Get("/archive/:year", h.ArchiveYear)
 	app.Get("/archive/:year/:month", h.ArchiveMonth)
 	app.Get("/tag/:tag", h.Tag)
+	app.Get("/preview/:token", h.Preview)
 	app.Get("/:slug", h.Article)
 	app.Get("/:slug/unlock", h.UnlockForm)
 	app.Post("/:slug/unlock", h.UnlockSubmit)

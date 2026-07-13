@@ -63,6 +63,9 @@ func (h *ArticleAdmin) Create(c fiber.Ctx) error {
 	a.Type = model.ArticleTypeMarkdown
 	a.Password = hashPasswordIfSet(c, h.hasher)
 	stampPublishedAt(&a, nil, h.clock.Now())
+	if err := ensurePreviewToken(&a, nil, c.FormValue("regen_preview") == "on"); err != nil {
+		return err
+	}
 
 	created, err := h.repo.CreateArticle(c.Context(), a)
 	if err != nil {
@@ -109,12 +112,22 @@ func (h *ArticleAdmin) Update(c fiber.Ctx) error {
 	// Empty password on edit means "keep current"; a non-empty value re-hashes.
 	updated.Password = keepOrHashPassword(c, h.hasher, existing.Password)
 	stampPublishedAt(&updated, &existing, h.clock.Now())
+	if err := ensurePreviewToken(&updated, &existing, c.FormValue("regen_preview") == "on"); err != nil {
+		return err
+	}
 
 	if _, err := h.repo.UpdateArticle(c.Context(), updated); err != nil {
 		if errors.Is(err, store.ErrDuplicateSlug) {
 			return c.Status(http.StatusConflict).SendString("slug already exists")
 		}
 		return err
+	}
+	// Slug rename → permanent redirect from the old path.
+	if existing.Slug != updated.Slug {
+		_, _ = h.repo.CreateRedirect(c.Context(), model.Redirect{
+			FromPath: normalizePath(existing.Slug),
+			ToPath:   normalizePath(updated.Slug),
+		})
 	}
 	return c.Redirect().To("/admin")
 }
@@ -143,7 +156,7 @@ func (h *ArticleAdmin) Delete(c fiber.Ctx) error {
 // per-request buffer that is reused after the handler returns, so anything
 // stored beyond the request (in the DB) must be copied.
 func articleFromForm(c fiber.Ctx) model.Article {
-	return model.Article{
+	a := model.Article{
 		Slug:       strings.Clone(strings.TrimSpace(c.FormValue("slug"))),
 		Title:      strings.Clone(strings.TrimSpace(c.FormValue("title"))),
 		Body:       strings.Clone(c.FormValue("body")),
@@ -152,6 +165,38 @@ func articleFromForm(c fiber.Ctx) model.Article {
 		Visibility: model.Visibility(strings.Clone(c.FormValue("visibility"))),
 		Pinned:     c.FormValue("pinned") == "on",
 	}
+	if raw := strings.TrimSpace(c.FormValue("publish_at")); raw != "" {
+		if t, err := parseFormTime(raw); err == nil {
+			a.PublishAt = &t
+		}
+	}
+	return a
+}
+
+// parseFormTime accepts datetime-local (2006-01-02T15:04) or RFC3339.
+func parseFormTime(s string) (time.Time, error) {
+	if t, err := time.ParseInLocation("2006-01-02T15:04", s, time.Local); err == nil {
+		return t.UTC(), nil
+	}
+	return time.Parse(time.RFC3339, s)
+}
+
+// ensurePreviewToken keeps or issues a draft preview token. Published articles
+// may keep a token (still works) but drafts always get one.
+func ensurePreviewToken(a *model.Article, existing *model.Article, regen bool) error {
+	if existing != nil && existing.PreviewToken != "" && !regen {
+		a.PreviewToken = existing.PreviewToken
+		return nil
+	}
+	if a.PreviewToken != "" && !regen {
+		return nil
+	}
+	tok, err := newPreviewToken()
+	if err != nil {
+		return err
+	}
+	a.PreviewToken = tok
+	return nil
 }
 
 // hashPasswordIfSet hashes a non-empty "password" form field for new articles;
@@ -184,12 +229,16 @@ func keepOrHashPassword(c fiber.Ctx, h auth.PasswordHasher, existing string) str
 }
 
 // stampPublishedAt sets PublishedAt the first time status becomes published.
-// Existing timestamps are preserved on re-save; drafts clear the field.
+// Existing timestamps are preserved on re-save; drafts clear PublishedAt.
+// Scheduled drafts keep PublishAt; publishing clears the schedule.
 func stampPublishedAt(a *model.Article, existing *model.Article, now time.Time) {
 	if a.Status != model.StatusPublished {
 		a.PublishedAt = nil
+		// Keep a.PublishAt from the form (schedule).
 		return
 	}
+	// Immediately published: drop schedule.
+	a.PublishAt = nil
 	if existing != nil && existing.PublishedAt != nil {
 		a.PublishedAt = existing.PublishedAt
 		return
@@ -229,8 +278,13 @@ func articleCreateErr(c fiber.Ctx, err error) error {
 // renderPage wraps a templ component in the shared layout and writes it to the
 // response. Centralised so handlers stay one line.
 func renderPage(c fiber.Ctx, title string, comp templ.Component) error {
+	return renderPageSEO(c, title, comp, layout.SEO{})
+}
+
+// renderPageSEO is like renderPage but attaches Open Graph / canonical meta.
+func renderPageSEO(c fiber.Ctx, title string, comp templ.Component, seo layout.SEO) error {
 	var buf bytes.Buffer
-	if err := layout.Page(title, comp).Render(c.Context(), &buf); err != nil {
+	if err := layout.Page(title, comp, seo).Render(c.Context(), &buf); err != nil {
 		return err
 	}
 	return c.Type("html").Send(buf.Bytes())

@@ -3,9 +3,18 @@ package admin
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sam33339999/wikibuild/internal/model"
 )
+
+// formatPublishAt renders a schedule time for datetime-local inputs.
+func formatPublishAt(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	return t.Local().Format("2006-01-02T15:04")
+}
 
 // ArticleList renders the admin article table. Each row links to edit and
 // delete. q is the current search query (may be empty).
@@ -15,6 +24,7 @@ templ ArticleList(items []model.Article, q string) {
 		<a href="/admin/new">＋ 新增文章</a>
 		· <a href="/admin/upload">上傳 HTML</a>
 		· <a href="/admin/tags">標籤管理</a>
+		· <a href="/admin/redirects">導向</a>
 		· <a href="/admin/settings">設定</a>
 	</p>
 	<form method="get" action="/admin">
@@ -100,6 +110,19 @@ templ ArticleForm(action string, a *model.Article, csrfToken string) {
 			</label>
 		</p>
 		<p><label><input name="pinned" type="checkbox" checked?={ a.Pinned }/> 置頂</label></p>
+		<p>
+			<label>排程發布（datetime-local，草稿在時間到後由排程器發布；立即 published 會忽略）<br/>
+				<input name="publish_at" type="datetime-local" value={ formatPublishAt(a.PublishAt) }/>
+			</label>
+		</p>
+		if a.PreviewToken != "" {
+			<p>
+				草稿預覽連結：
+				<a href={ "/preview/" + a.PreviewToken } target="_blank" rel="noopener">/preview/{ a.PreviewToken }</a>
+				<br/>
+				<label><input name="regen_preview" type="checkbox"/> 重新產生預覽 token</label>
+			</p>
+		}
 		<p>
 			<label>protected 密碼（留空用全站預設；編輯時留空=保留原密碼）<br/>
 				<input name="password" type="password" autocomplete="new-password"/>

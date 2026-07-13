@@ -42,19 +42,21 @@ func (r *Repository) CreateArticle(ctx context.Context, a model.Article) (model.
 		return model.Article{}, store.ErrEmptySlug
 	}
 	row, err := r.q.CreateArticle(ctx, sqlc.CreateArticleParams{
-		Slug:        a.Slug,
-		Title:       a.Title,
-		Type:        string(a.Type),
-		Status:      string(a.Status),
-		Visibility:  string(a.Visibility),
-		Password:    a.Password,
-		RawMode:     a.RawMode,
-		Pinned:      a.Pinned,
-		Body:        a.Body,
-		Tags:        normalizeTags(a.Tags),
-		CreatedAt:   nargTime(a.CreatedAt),
-		UpdatedAt:   nargTime(a.UpdatedAt),
-		PublishedAt: toTimestamptz(a.PublishedAt),
+		Slug:         a.Slug,
+		Title:        a.Title,
+		Type:         string(a.Type),
+		Status:       string(a.Status),
+		Visibility:   string(a.Visibility),
+		Password:     a.Password,
+		RawMode:      a.RawMode,
+		Pinned:       a.Pinned,
+		Body:         a.Body,
+		Tags:         normalizeTags(a.Tags),
+		CreatedAt:    nargTime(a.CreatedAt),
+		UpdatedAt:    nargTime(a.UpdatedAt),
+		PublishedAt:  toTimestamptz(a.PublishedAt),
+		PublishAt:    toTimestamptz(a.PublishAt),
+		PreviewToken: a.PreviewToken,
 	})
 	if err != nil {
 		return model.Article{}, mapArticleErr(err)
@@ -78,26 +80,98 @@ func (r *Repository) GetArticleBySlug(ctx context.Context, slug string) (model.A
 	return articleToModel(row), nil
 }
 
+func (r *Repository) GetArticleByPreviewToken(ctx context.Context, token string) (model.Article, error) {
+	if token == "" {
+		return model.Article{}, store.ErrNotFound
+	}
+	row, err := r.q.GetArticleByPreviewToken(ctx, token)
+	if err != nil {
+		return model.Article{}, mapArticleErr(err)
+	}
+	return articleToModel(row), nil
+}
+
 func (r *Repository) UpdateArticle(ctx context.Context, a model.Article) (model.Article, error) {
 	row, err := r.q.UpdateArticle(ctx, sqlc.UpdateArticleParams{
-		ID:          a.ID,
-		Slug:        a.Slug,
-		Title:       a.Title,
-		Type:        string(a.Type),
-		Status:      string(a.Status),
-		Visibility:  string(a.Visibility),
-		Password:    a.Password,
-		RawMode:     a.RawMode,
-		Pinned:      a.Pinned,
-		Body:        a.Body,
-		Tags:        normalizeTags(a.Tags),
-		UpdatedAt:   toTimestamptz(nonZeroPtr(a.UpdatedAt)),
-		PublishedAt: toTimestamptz(a.PublishedAt),
+		ID:           a.ID,
+		Slug:         a.Slug,
+		Title:        a.Title,
+		Type:         string(a.Type),
+		Status:       string(a.Status),
+		Visibility:   string(a.Visibility),
+		Password:     a.Password,
+		RawMode:      a.RawMode,
+		Pinned:       a.Pinned,
+		Body:         a.Body,
+		Tags:         normalizeTags(a.Tags),
+		UpdatedAt:    toTimestamptz(nonZeroPtr(a.UpdatedAt)),
+		PublishedAt:  toTimestamptz(a.PublishedAt),
+		PublishAt:    toTimestamptz(a.PublishAt),
+		PreviewToken: a.PreviewToken,
 	})
 	if err != nil {
 		return model.Article{}, mapArticleErr(err)
 	}
 	return articleToModel(row), nil
+}
+
+func (r *Repository) ListDueScheduled(ctx context.Context, now time.Time) ([]model.Article, error) {
+	rows, err := r.q.ListDueScheduled(ctx, pgtype.Timestamptz{Time: now, Valid: true})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Article, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, articleToModel(row))
+	}
+	return out, nil
+}
+
+// ---------------- Redirects ----------------
+
+func (r *Repository) CreateRedirect(ctx context.Context, redir model.Redirect) (model.Redirect, error) {
+	if redir.FromPath == "" || redir.ToPath == "" {
+		return model.Redirect{}, store.ErrEmptyPath
+	}
+	row, err := r.q.CreateRedirect(ctx, sqlc.CreateRedirectParams{
+		FromPath:  redir.FromPath,
+		ToPath:    redir.ToPath,
+		CreatedAt: nargTime(redir.CreatedAt),
+	})
+	if err != nil {
+		return model.Redirect{}, err
+	}
+	return redirectToModel(row), nil
+}
+
+func (r *Repository) GetRedirect(ctx context.Context, fromPath string) (model.Redirect, error) {
+	row, err := r.q.GetRedirect(ctx, fromPath)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.Redirect{}, store.ErrNotFound
+		}
+		return model.Redirect{}, err
+	}
+	return redirectToModel(row), nil
+}
+
+func (r *Repository) ListRedirects(ctx context.Context) ([]model.Redirect, error) {
+	rows, err := r.q.ListRedirects(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]model.Redirect, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, redirectToModel(row))
+	}
+	return out, nil
+}
+
+func (r *Repository) DeleteRedirect(ctx context.Context, fromPath string) error {
+	if _, err := r.GetRedirect(ctx, fromPath); err != nil {
+		return err
+	}
+	return r.q.DeleteRedirect(ctx, fromPath)
 }
 
 func (r *Repository) DeleteArticle(ctx context.Context, id int64) error {
@@ -301,20 +375,31 @@ func mapUnique(err error, constraint string, sentinel error) error {
 
 func articleToModel(a sqlc.Article) model.Article {
 	return model.Article{
-		ID:          a.ID,
-		Slug:        a.Slug,
-		Title:       a.Title,
-		Type:        model.ArticleType(a.Type),
-		Status:      model.Status(a.Status),
-		Visibility:  model.Visibility(a.Visibility),
-		Password:    a.Password,
-		RawMode:     a.RawMode,
-		Pinned:      a.Pinned,
-		Body:        a.Body,
-		Tags:        a.Tags,
-		CreatedAt:   fromTimestamptz(a.CreatedAt),
-		UpdatedAt:   fromTimestamptz(a.UpdatedAt),
-		PublishedAt: fromTimestamptzPtr(a.PublishedAt),
+		ID:           a.ID,
+		Slug:         a.Slug,
+		Title:        a.Title,
+		Type:         model.ArticleType(a.Type),
+		Status:       model.Status(a.Status),
+		Visibility:   model.Visibility(a.Visibility),
+		Password:     a.Password,
+		RawMode:      a.RawMode,
+		Pinned:       a.Pinned,
+		Body:         a.Body,
+		Tags:         a.Tags,
+		CreatedAt:    fromTimestamptz(a.CreatedAt),
+		UpdatedAt:    fromTimestamptz(a.UpdatedAt),
+		PublishedAt:  fromTimestamptzPtr(a.PublishedAt),
+		PublishAt:    fromTimestamptzPtr(a.PublishAt),
+		PreviewToken: a.PreviewToken,
+	}
+}
+
+func redirectToModel(r sqlc.Redirect) model.Redirect {
+	return model.Redirect{
+		ID:        r.ID,
+		FromPath:  r.FromPath,
+		ToPath:    r.ToPath,
+		CreatedAt: fromTimestamptz(r.CreatedAt),
 	}
 }
 

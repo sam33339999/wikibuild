@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -15,6 +16,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/render"
 	"github.com/sam33339999/wikibuild/internal/store"
+	"github.com/sam33339999/wikibuild/views/layout"
 	publicviews "github.com/sam33339999/wikibuild/views/public"
 )
 
@@ -26,6 +28,9 @@ const (
 	// SettingDefaultProtectedPass is the settings key for the site-wide
 	// default password used by protected articles without their own.
 	SettingDefaultProtectedPass = "default_protected_password"
+	SettingCommentProvider      = "comment_provider" // "", "giscus", "utterances"
+	SettingCommentRepo          = "comment_repo"     // owner/repo
+	SettingCommentCategory      = "comment_category" // giscus category name
 )
 
 // Public serves reader-facing pages. Visibility is enforced via the gate
@@ -38,19 +43,22 @@ type Public struct {
 	hasher         auth.PasswordHasher
 	envDefaultPass string // fallback when no DB setting is set
 	contentDir     string // root for html_upload article files
+	baseURL        string // no trailing slash; used for SEO canonical URLs
 	pageSize       int
 }
 
 // NewPublic builds a Public handler. envDefaultPass is the fallback site-wide
 // password (from config) used when no settings-managed value exists.
 // contentDir is where html_upload articles' files live (<contentDir>/<slug>/).
-func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordHasher, envDefaultPass, contentDir string) *Public {
+// baseURL is optional (empty → relative SEO only).
+func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordHasher, envDefaultPass, contentDir, baseURL string) *Public {
 	return &Public{
 		repo:           repo,
 		signer:         signer,
 		hasher:         hasher,
 		envDefaultPass: envDefaultPass,
 		contentDir:     contentDir,
+		baseURL:        strings.TrimRight(baseURL, "/"),
 		pageSize:       defaultPageSize,
 	}
 }
@@ -77,10 +85,19 @@ func (h *Public) Index(c fiber.Ctx) error {
 }
 
 // Article renders a single article by slug, applying the visibility gate.
+// Unknown slugs fall through to the redirects table (301).
 func (h *Public) Article(c fiber.Ctx) error {
-	a, err := h.repo.GetArticleBySlug(c.Context(), c.Params("slug"))
+	slug := c.Params("slug")
+	a, err := h.repo.GetArticleBySlug(c.Context(), slug)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
+			ok, rerr := tryRedirect(c, h.repo, "/"+slug)
+			if rerr != nil {
+				return rerr
+			}
+			if ok {
+				return nil
+			}
 			return c.SendStatus(http.StatusNotFound)
 		}
 		return err
@@ -144,9 +161,18 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 // TOC; html_upload reads the stored file and either serves it raw (raw_mode)
 // or injects it into the layout.
 func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
+	comments := h.commentConfig(c)
+	seo := layout.SEO{
+		Type:        "article",
+		Description: feedSummary(a.Body),
+	}
+	if h.baseURL != "" {
+		seo.Canonical = h.baseURL + "/" + a.Slug
+	}
 	if a.Type != model.ArticleTypeHTMLUpload {
 		html, toc := render.RenderWithTOC(a.Body)
-		return renderPage(c, a.Title, publicviews.Article(a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a)))
+		return renderPageSEO(c, a.Title, publicviews.Article(
+			a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a), comments), seo)
 	}
 
 	data, err := readUploadFile(h.contentDir, a.Slug, a.Body)
@@ -159,7 +185,30 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 		return c.Type("html").Send(data)
 	}
 	// Inject the uploaded HTML into the layout (no TOC/reading time for pre-built pages).
-	return renderPage(c, a.Title, publicviews.Article(a, string(data), nil, 0, nil))
+	return renderPageSEO(c, a.Title, publicviews.Article(a, string(data), nil, 0, nil, comments), seo)
+}
+
+func (h *Public) commentConfig(c fiber.Ctx) publicviews.CommentConfig {
+	provider, _ := h.repo.GetSetting(c.Context(), SettingCommentProvider)
+	repo, _ := h.repo.GetSetting(c.Context(), SettingCommentRepo)
+	cat, _ := h.repo.GetSetting(c.Context(), SettingCommentCategory)
+	return publicviews.CommentConfig{
+		Provider: provider,
+		Repo:     repo,
+		Category: cat,
+	}
+}
+
+// feedSummary reuses a short plain-text blurb for meta description.
+func feedSummary(body string) string {
+	s := strings.TrimSpace(body)
+	s = strings.ReplaceAll(s, "#", "")
+	s = strings.ReplaceAll(s, "*", "")
+	s = strings.Join(strings.Fields(s), " ")
+	if len(s) > 160 {
+		return s[:160] + "…"
+	}
+	return s
 }
 
 // backlinksFor returns published, public articles whose body wikilinks to a.
