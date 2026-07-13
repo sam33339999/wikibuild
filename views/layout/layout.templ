@@ -2,6 +2,8 @@
 // by both admin and public pages.
 package layout
 
+import "github.com/sam33339999/wikibuild/internal/sitebrand"
+
 // SEO holds optional head meta for public pages (feeds, OG, canonical, JSON-LD).
 // Zero value means "no extra SEO tags" beyond defaults.
 type SEO struct {
@@ -16,14 +18,18 @@ type SEO struct {
 }
 
 // Page wraps page content in the shared HTML document. title sets <title>.
-// seo may be the zero value for admin pages.
-templ Page(title string, content templ.Component, seo SEO) {
+// brand is the public site identity (name, tagline, socials).
+templ Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand) {
 	<!doctype html>
 	<html lang="zh-Hant">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
-			<title>{ title }</title>
+			if title == brand.Name || title == "" {
+				<title>{ brand.Name }</title>
+			} else {
+				<title>{ title } · { brand.Name }</title>
+			}
 			// Apply stored theme before paint to avoid flash of wrong theme.
 			<script>
 				(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
@@ -37,6 +43,8 @@ templ Page(title string, content templ.Component, seo SEO) {
 				<meta name="description" content={ seo.Description }/>
 				<meta property="og:description" content={ seo.Description }/>
 				<meta name="twitter:description" content={ seo.Description }/>
+			} else if brand.Tagline != "" {
+				<meta name="description" content={ brand.Tagline }/>
 			}
 			if seo.Canonical != "" {
 				<link rel="canonical" href={ seo.Canonical }/>
@@ -59,22 +67,25 @@ templ Page(title string, content templ.Component, seo SEO) {
 			<link rel="alternate" type="application/rss+xml" title="RSS" href="/feed"/>
 			<link rel="alternate" type="application/atom+xml" title="Atom" href="/feed/atom"/>
 			<link rel="alternate" type="application/feed+json" title="JSON Feed" href="/feed.json"/>
-			// templ treats <script> children as opaque text, so emit the whole
-			// JSON-LD tag via Raw (JSON is produced by encoding/json).
 			if seo.JSONLD != "" {
 				@templ.Raw(`<script type="application/ld+json">` + seo.JSONLD + `</script>`)
 			}
 		</head>
-		<body>
+		<body class="theme-khaki">
 			<header class="site-header">
 				<a class="brand" href="/">
-					<i data-lucide="book-open" class="icon icon-md" aria-hidden="true"></i>
-					<span>WikiBuild</span>
+					<span class="brand-mark" aria-hidden="true"></span>
+					<span class="brand-text">
+						<span class="brand-name">{ brand.Name }</span>
+						if brand.Tagline != "" {
+							<span class="brand-tagline">{ brand.Tagline }</span>
+						}
+					</span>
 				</a>
 				<nav class="site-nav" aria-label="主要">
 					<a href="/">
 						<i data-lucide="home" class="icon icon-sm" aria-hidden="true"></i>
-						<span>首頁</span>
+						<span>Works</span>
 					</a>
 					<a href="/search">
 						<i data-lucide="search" class="icon icon-sm" aria-hidden="true"></i>
@@ -89,21 +100,18 @@ templ Page(title string, content templ.Component, seo SEO) {
 						<span>RSS</span>
 					</a>
 					<a href="/admin">
-						<i data-lucide="layout-dashboard" class="icon icon-sm" aria-hidden="true"></i>
-						<span>後台</span>
+						<i data-lucide="terminal" class="icon icon-sm" aria-hidden="true"></i>
+						<span>Workbench</span>
 					</a>
 					<span class="theme-switcher" role="group" aria-label="主題">
 						<button type="button" data-theme-set="light" aria-pressed="false" title="淺色">
 							<i data-lucide="sun" class="icon icon-sm" aria-hidden="true"></i>
-							<span>淺色</span>
 						</button>
 						<button type="button" data-theme-set="dark" aria-pressed="false" title="深色">
 							<i data-lucide="moon" class="icon icon-sm" aria-hidden="true"></i>
-							<span>深色</span>
 						</button>
 						<button type="button" data-theme-set="auto" aria-pressed="true" title="跟隨系統">
 							<i data-lucide="monitor" class="icon icon-sm" aria-hidden="true"></i>
-							<span>自動</span>
 						</button>
 					</span>
 				</nav>
@@ -112,9 +120,35 @@ templ Page(title string, content templ.Component, seo SEO) {
 				@content
 			</main>
 			<footer class="site-footer">
-				<a href="/feed">RSS</a> · <a href="/sitemap.xml">Sitemap</a>
+				<div class="footer-brand">
+					<span class="footer-name">{ brand.Name }</span>
+					if brand.Author != "" {
+						<span class="footer-author"> · { brand.Author }</span>
+					}
+				</div>
+				<div class="footer-links">
+					if brand.GitHubURL() != "" {
+						<a href={ brand.GitHubURL() } target="_blank" rel="noopener me" title="GitHub">
+							<i data-lucide="github" class="icon icon-sm" aria-hidden="true"></i>
+							<span>GitHub</span>
+						</a>
+					}
+					if brand.XURL() != "" {
+						<a href={ brand.XURL() } target="_blank" rel="noopener me" title="X">
+							<i data-lucide="twitter" class="icon icon-sm" aria-hidden="true"></i>
+							<span>X</span>
+						</a>
+					}
+					if brand.Mailto() != "" {
+						<a href={ brand.Mailto() } title="Email">
+							<i data-lucide="mail" class="icon icon-sm" aria-hidden="true"></i>
+							<span>Email</span>
+						</a>
+					}
+					<a href="/feed">RSS</a>
+					<a href="/sitemap.xml">Sitemap</a>
+				</div>
 			</footer>
-			// Lucide UMD then hydrate data-lucide nodes; theme last.
 			<script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 			<script src="/static/js/icons.js" defer></script>
 			<script src="/static/js/theme.js" defer></script>

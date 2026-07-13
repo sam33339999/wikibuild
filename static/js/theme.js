@@ -117,7 +117,7 @@
     // Paint the *target* theme colors on the expanding circle.
     var goingDark = resolvedIsDark(mode);
     // Match site.css tokens so the wipe colour equals the destination theme.
-    overlay.style.background = goingDark ? "#0b0f14" : "#f4f5f7";
+    overlay.style.background = goingDark ? "#161410" : "#ebe6d9";
     overlay.style.left = coords.x + "px";
     overlay.style.top = coords.y + "px";
     document.body.appendChild(overlay);

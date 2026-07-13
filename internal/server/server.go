@@ -74,6 +74,9 @@ func New(d Deps) *fiber.App {
 	}
 	app.Get("/static/*", static.New(staticDir, static.Config{MaxAge: 86400}))
 
+	// Site brand (name, tagline, socials) for layout chrome on every page.
+	app.Use(handler.BrandMiddleware(d.Store, d.SiteTitle))
+
 	adminAuth := handler.NewAdminAuth(handler.AdminAuthDeps{
 		Store:   d.Store,
 		Hasher:  d.Hasher,

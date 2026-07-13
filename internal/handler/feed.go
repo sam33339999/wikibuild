@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/sam33339999/wikibuild/internal/feed"
 	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/sitebrand"
 	"github.com/sam33339999/wikibuild/internal/store"
 )
 
@@ -22,11 +23,16 @@ func NewSyndication(repo store.Repository, baseURL, title string) *Syndication {
 	return &Syndication{repo: repo, baseURL: baseURL, title: title}
 }
 
-func (h *Syndication) site() feed.Site {
+func (h *Syndication) site(c fiber.Ctx) feed.Site {
+	b := sitebrand.Load(c.Context(), h.repo, h.title)
+	desc := b.Tagline
+	if desc == "" {
+		desc = b.Name
+	}
 	return feed.Site{
-		Title:       h.title,
+		Title:       b.Name,
 		BaseURL:     h.baseURL,
-		Description: h.title,
+		Description: desc,
 	}
 }
 
@@ -48,7 +54,7 @@ func (h *Syndication) RSS(c fiber.Ctx) error {
 		return err
 	}
 	c.Set("Content-Type", "application/rss+xml; charset=utf-8")
-	return c.SendString(feed.RSS(h.site(), items))
+	return c.SendString(feed.RSS(h.site(c), items))
 }
 
 // Atom serves application/atom+xml at /feed/atom.
@@ -58,7 +64,7 @@ func (h *Syndication) Atom(c fiber.Ctx) error {
 		return err
 	}
 	c.Set("Content-Type", "application/atom+xml; charset=utf-8")
-	return c.SendString(feed.Atom(h.site(), items))
+	return c.SendString(feed.Atom(h.site(c), items))
 }
 
 // JSONFeed serves application/feed+json at /feed.json.
@@ -68,7 +74,7 @@ func (h *Syndication) JSONFeed(c fiber.Ctx) error {
 		return err
 	}
 	c.Set("Content-Type", "application/feed+json; charset=utf-8")
-	return c.SendString(feed.JSON(h.site(), items))
+	return c.SendString(feed.JSON(h.site(c), items))
 }
 
 // Sitemap serves /sitemap.xml for published public articles.

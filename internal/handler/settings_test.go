@@ -36,6 +36,9 @@ func TestSettings_Save_PersistsValue(t *testing.T) {
 	app, repo := settingsApp(t)
 	form := url.Values{}
 	form.Set("default_protected_password", "newdefault")
+	form.Set("site_name", "Sam Lab")
+	form.Set("site_tagline", "Build notes")
+	form.Set("author_name", "Sam")
 	req := httptest.NewRequest(http.MethodPost, "/admin/settings", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := app.Test(req)
@@ -46,6 +49,22 @@ func TestSettings_Save_PersistsValue(t *testing.T) {
 	got, err := repo.GetSetting(nil, "default_protected_password")
 	require.NoError(t, err)
 	require.Equal(t, "newdefault", got)
+	name, _ := repo.GetSetting(nil, "site_name")
+	require.Equal(t, "Sam Lab", name)
+	tag, _ := repo.GetSetting(nil, "site_tagline")
+	require.Equal(t, "Build notes", tag)
+}
+
+func TestSettings_Form_ShowsBrandSections(t *testing.T) {
+	app, _ := settingsApp(t)
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin/settings", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, "對外形象")
+	require.Contains(t, s, `name="site_name"`)
+	require.Contains(t, s, `name="author_bio"`)
+	require.Contains(t, s, "settings-card")
 }
 
 func TestSettings_FormShowsStoredValue(t *testing.T) {

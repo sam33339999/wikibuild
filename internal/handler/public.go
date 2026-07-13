@@ -17,6 +17,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/render"
 	"github.com/sam33339999/wikibuild/internal/seo"
+	"github.com/sam33339999/wikibuild/internal/sitebrand"
 	"github.com/sam33339999/wikibuild/internal/store"
 	"github.com/sam33339999/wikibuild/views/layout"
 	publicviews "github.com/sam33339999/wikibuild/views/public"
@@ -65,7 +66,7 @@ func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordH
 	}
 }
 
-// Index renders the paginated list of published, public articles.
+// Index renders the homepage: brand intro + published public works.
 func (h *Public) Index(c fiber.Ctx) error {
 	page := parsePage(c.Query("page"))
 	offset := (page - 1) * h.pageSize
@@ -83,7 +84,12 @@ func (h *Public) Index(c fiber.Ctx) error {
 	if totalPages < 1 {
 		totalPages = 1
 	}
-	return renderPage(c, "文章", publicviews.Index(items, page, totalPages))
+	brand := brandFromCtx(c)
+	// Prefer loaded brand; middleware always sets one.
+	if brand.Name == "" {
+		brand = sitebrand.Load(c.Context(), h.repo, "WikiBuild")
+	}
+	return renderPage(c, brand.Name, publicviews.Index(brand, items, page, totalPages))
 }
 
 // Article renders a single article by slug, applying the visibility gate.

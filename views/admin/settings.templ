@@ -2,44 +2,146 @@ package admin
 
 // SettingsData is the current values for the settings form.
 type SettingsData struct {
+	// Brand
+	SiteName    string
+	SiteTagline string
+	AuthorName  string
+	AuthorBio   string
+	SocialGitHub string
+	SocialX      string
+	SocialEmail  string
+	// Privacy / comments
 	DefaultProtectedPass string
 	CommentProvider      string
 	CommentRepo          string
 	CommentCategory      string
 }
 
-// Settings renders the site settings form.
+// Settings renders the site settings form as brand + ops cards.
 templ Settings(data SettingsData, csrfToken string) {
-	<h1>設定</h1>
-	<p><a href="/admin">← 文章列表</a></p>
-	<form method="post" action="/admin/settings">
-		<input type="hidden" name="_csrf" value={ csrfToken }/>
-		<h2>可見性</h2>
-		<p>
-			<label>全站預設 protected 密碼（留空則使用環境變數 WIKIBUILD_DEFAULT_PROTECTED_PASS）<br/>
-				<input name="default_protected_password" type="password" value={ data.DefaultProtectedPass } autocomplete="off"/>
-			</label>
-		</p>
-		<h2>留言（giscus / utterances）</h2>
-		<p>
-			<label>提供者
-				<select name="comment_provider">
-					<option value="" selected?={ data.CommentProvider == "" }>關閉</option>
-					<option value="giscus" selected?={ data.CommentProvider == "giscus" }>giscus</option>
-					<option value="utterances" selected?={ data.CommentProvider == "utterances" }>utterances</option>
-				</select>
-			</label>
-		</p>
-		<p>
-			<label>GitHub repo（owner/repo）<br/>
-				<input name="comment_repo" value={ data.CommentRepo } placeholder="owner/repo"/>
-			</label>
-		</p>
-		<p>
-			<label>giscus category 名稱（utterances 可留空）<br/>
-				<input name="comment_category" value={ data.CommentCategory }/>
-			</label>
-		</p>
-		<p><button type="submit">儲存</button></p>
-	</form>
+	<div class="settings-page">
+		<header class="settings-hero">
+			<p class="eyebrow">Workbench · Settings</p>
+			<h1>站台設定</h1>
+			<p class="lede">工程手帳 × 作品集：管理對外形象、隱私與讀者互動。</p>
+		</header>
+
+		<form method="post" action="/admin/settings" class="settings-form">
+			<input type="hidden" name="_csrf" value={ csrfToken }/>
+
+			<section class="settings-card">
+				<header class="settings-card-head">
+					<h2>對外形象</h2>
+					<p class="meta">顯示在頂欄、首頁與 footer。卡其色主題已固定於全站樣式。</p>
+				</header>
+				<div class="settings-grid">
+					<label>
+						站名
+						<input name="site_name" value={ data.SiteName } placeholder="例如：Sam Lab" autocomplete="organization"/>
+					</label>
+					<label>
+						標語
+						<input name="site_tagline" value={ data.SiteTagline } placeholder="Engineering notes & selected work"/>
+					</label>
+					<label>
+						作者名
+						<input name="author_name" value={ data.AuthorName } placeholder="顯示名稱" autocomplete="name"/>
+					</label>
+					<label class="full">
+						簡介（首頁）
+						<textarea name="author_bio" rows="4" placeholder="一兩段話說明你是誰、在做什麼。">{ data.AuthorBio }</textarea>
+					</label>
+				</div>
+			</section>
+
+			<section class="settings-card">
+				<header class="settings-card-head">
+					<h2>連結</h2>
+					<p class="meta">出現在 footer；可填 handle 或完整 URL。</p>
+				</header>
+				<div class="settings-grid">
+					<label>
+						GitHub
+						<input name="social_github" value={ data.SocialGitHub } placeholder="username 或 https://github.com/…"/>
+					</label>
+					<label>
+						X / Twitter
+						<input name="social_x" value={ data.SocialX } placeholder="@handle"/>
+					</label>
+					<label class="full">
+						Email
+						<input name="social_email" type="email" value={ data.SocialEmail } placeholder="you@example.com" autocomplete="email"/>
+					</label>
+				</div>
+			</section>
+
+			<section class="settings-card">
+				<header class="settings-card-head">
+					<h2>隱私 · protected</h2>
+					<p class="meta">文章設為 protected 且未設本篇密碼時使用。</p>
+				</header>
+				<label>
+					全站預設 protected 密碼
+					<input name="default_protected_password" type="password" value={ data.DefaultProtectedPass } autocomplete="off" placeholder="留空則用環境變數"/>
+				</label>
+			</section>
+
+			<section class="settings-card">
+				<header class="settings-card-head">
+					<h2>讀者互動</h2>
+					<p class="meta">文章頁底部的留言嵌入（可關閉）。</p>
+				</header>
+				<div class="settings-grid">
+					<label>
+						提供者
+						<select name="comment_provider">
+							<option value="" selected?={ data.CommentProvider == "" }>關閉</option>
+							<option value="giscus" selected?={ data.CommentProvider == "giscus" }>giscus</option>
+							<option value="utterances" selected?={ data.CommentProvider == "utterances" }>utterances</option>
+						</select>
+					</label>
+					<label>
+						GitHub repo（owner/repo）
+						<input name="comment_repo" value={ data.CommentRepo } placeholder="owner/repo"/>
+					</label>
+					<label class="full">
+						giscus category（utterances 可留空）
+						<input name="comment_category" value={ data.CommentCategory }/>
+					</label>
+				</div>
+			</section>
+
+			<p class="settings-actions">
+				<button type="submit" class="btn-primary">儲存設定</button>
+				<a href="/admin" class="meta">← 返回文章列表</a>
+			</p>
+		</form>
+
+		<aside class="settings-preview">
+			<p class="eyebrow">Preview</p>
+			<div class="preview-card">
+				<span class="brand-mark" aria-hidden="true"></span>
+				<strong>
+					if data.SiteName != "" {
+						{ data.SiteName }
+					} else {
+						（站名）
+					}
+				</strong>
+				if data.SiteTagline != "" {
+					<p class="preview-tagline">{ data.SiteTagline }</p>
+				}
+				if data.AuthorName != "" || data.AuthorBio != "" {
+					<p class="preview-bio">
+						if data.AuthorName != "" {
+							<span class="preview-author">{ data.AuthorName }</span>
+						}
+						if data.AuthorBio != "" {
+							<span>{ data.AuthorBio }</span>
+						}
+					</p>
+				}
+			</div>
+		</aside>
+	</div>
 }

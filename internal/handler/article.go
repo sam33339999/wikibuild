@@ -16,10 +16,14 @@ import (
 	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/clock"
 	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/sitebrand"
 	"github.com/sam33339999/wikibuild/internal/store"
 	adminviews "github.com/sam33339999/wikibuild/views/admin"
 	"github.com/sam33339999/wikibuild/views/layout"
 )
+
+// Locals key for the request-scoped site brand (set by server middleware).
+const localsBrandKey = "siteBrand"
 
 // ArticleAdmin handles admin article CRUD. It depends only on store.Repository
 // and auth.PasswordHasher so it is unit-tested against inmem with a fake
@@ -334,9 +338,26 @@ func renderPage(c fiber.Ctx, title string, comp templ.Component) error {
 
 // renderPageSEO is like renderPage but attaches Open Graph / canonical meta.
 func renderPageSEO(c fiber.Ctx, title string, comp templ.Component, seo layout.SEO) error {
+	brand := brandFromCtx(c)
 	var buf bytes.Buffer
-	if err := layout.Page(title, comp, seo).Render(c.Context(), &buf); err != nil {
+	if err := layout.Page(title, comp, seo, brand).Render(c.Context(), &buf); err != nil {
 		return err
 	}
 	return c.Type("html").Send(buf.Bytes())
+}
+
+// brandFromCtx returns the brand loaded by middleware, or a default.
+func brandFromCtx(c fiber.Ctx) sitebrand.Brand {
+	if b, ok := c.Locals(localsBrandKey).(sitebrand.Brand); ok {
+		return b
+	}
+	return sitebrand.Default("WikiBuild")
+}
+
+// BrandMiddleware loads site identity into Locals for every request.
+func BrandMiddleware(repo store.Repository, fallbackTitle string) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		c.Locals(localsBrandKey, sitebrand.Load(c.Context(), repo, fallbackTitle))
+		return c.Next()
+	}
 }

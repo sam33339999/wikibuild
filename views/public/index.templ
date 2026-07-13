@@ -4,43 +4,97 @@ import (
 	"strconv"
 
 	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/sitebrand"
 )
 
-// Index renders the paginated article list for the homepage.
-// Global nav lives in layout; page-level chrome stays minimal.
-templ Index(items []model.Article, page, totalPages int) {
-	<h1>文章</h1>
-	if len(items) == 0 {
-		<p>尚無文章。</p>
-	} else {
-		for _, a := range items {
-			<article>
-				<h2><a href={ "/" + a.Slug }>{ a.Title }</a></h2>
-				if a.PublishedAt != nil {
-					<time>{ formatDate(a.PublishedAt) }</time>
-				}
-				if len(a.Tags) > 0 {
-					<p class="tags">
-						for i, t := range a.Tags {
-							if i > 0 {
-								{ ", " }
-							}
-							<a href={ "/tag/" + t }>{ t }</a>
+// Index renders the homepage: brand intro (portfolio) + works list (notebook).
+templ Index(brand sitebrand.Brand, items []model.Article, page, totalPages int) {
+	<section class="home-hero">
+		<p class="eyebrow">Portfolio · Field notes</p>
+		if brand.Author != "" {
+			<h1 class="hero-title">{ brand.Author }</h1>
+		} else {
+			<h1 class="hero-title">{ brand.Name }</h1>
+		}
+		if brand.Tagline != "" {
+			<p class="hero-tagline">{ brand.Tagline }</p>
+		}
+		if brand.Bio != "" {
+			<p class="hero-bio">{ brand.Bio }</p>
+		}
+		<div class="hero-links">
+			if brand.GitHubURL() != "" {
+				<a class="chip" href={ brand.GitHubURL() } target="_blank" rel="noopener">
+					<i data-lucide="github" class="icon icon-sm" aria-hidden="true"></i> GitHub
+				</a>
+			}
+			if brand.XURL() != "" {
+				<a class="chip" href={ brand.XURL() } target="_blank" rel="noopener">
+					<i data-lucide="twitter" class="icon icon-sm" aria-hidden="true"></i> X
+				</a>
+			}
+			if brand.Mailto() != "" {
+				<a class="chip" href={ brand.Mailto() }>
+					<i data-lucide="mail" class="icon icon-sm" aria-hidden="true"></i> Email
+				</a>
+			}
+			<a class="chip" href="/feed">
+				<i data-lucide="rss" class="icon icon-sm" aria-hidden="true"></i> RSS
+			</a>
+		</div>
+	</section>
+
+	<section class="works">
+		<header class="works-head">
+			<h2>Works</h2>
+			<p class="meta">置頂優先 · 公開已發布</p>
+		</header>
+		if len(items) == 0 {
+			<p class="empty-works">尚無公開作品。從後台新增 Markdown 或上傳 HTML。</p>
+		} else {
+			<ul class="work-list">
+				for _, a := range items {
+					<li class="work-item">
+						if a.Pinned {
+							<span class="pin-badge" title="置頂">PIN</span>
 						}
-					</p>
+						<div class="work-body">
+							<a class="work-title" href={ "/" + a.Slug }>{ a.Title }</a>
+							<div class="work-meta">
+								if a.Type == model.ArticleTypeHTMLUpload {
+									<span class="type-badge">HTML</span>
+								} else {
+									<span class="type-badge">MD</span>
+								}
+								if a.PublishedAt != nil {
+									<time>{ formatDate(a.PublishedAt) }</time>
+								}
+								if len(a.Tags) > 0 {
+									<span class="work-tags">
+										for i, t := range a.Tags {
+											if i > 0 {
+												{ " " }
+											}
+											<a href={ "/tag/" + t }>#{ t }</a>
+										}
+									</span>
+								}
+							</div>
+						</div>
+					</li>
 				}
-			</article>
+			</ul>
+			if totalPages > 1 {
+				<nav class="pagination">
+					if page > 1 {
+						<a href={ "/?page=" + strconv.Itoa(page-1) }>← 上一頁</a>
+					}
+					<span class="meta">{ strconv.Itoa(page) } / { strconv.Itoa(totalPages) }</span>
+					if page < totalPages {
+						<a href={ "/?page=" + strconv.Itoa(page+1) }>下一頁 →</a>
+					}
+				</nav>
+			}
 		}
-		if totalPages > 1 {
-			<nav class="pagination">
-				if page > 1 {
-					<a href={ "/?page=" + strconv.Itoa(page-1) }>← 上一頁</a>
-				}
-				<span>{ strconv.Itoa(page) } / { strconv.Itoa(totalPages) }</span>
-				if page < totalPages {
-					<a href={ "/?page=" + strconv.Itoa(page+1) }>下一頁 →</a>
-				}
-			</nav>
-		}
-	}
+	</section>
 }
