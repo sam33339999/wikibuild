@@ -24,19 +24,29 @@ templ Upload(csrfToken string) {
 		</p>
 		<p>
 			<label>可見性
-				<select name="visibility">
-					<option value="public">public</option>
-					<option value="protected">protected</option>
-					<option value="private">private</option>
+				<select name="visibility" id="visibility">
+					<option value="public">public — 公開</option>
+					<option value="protected">protected — 需密碼</option>
+					<option value="private">private — 僅 admin</option>
 				</select>
 			</label>
 		</p>
+		<div id="protected-password-fields" class="protected-password-box" hidden>
+			<p>
+				<label>
+					本篇 protected 密碼<br/>
+					<input name="password" type="password" autocomplete="new-password" placeholder="可留空，用全站預設"/>
+				</label>
+			</p>
+			<p class="meta">選 protected 時可設本篇密碼；留空則用<a href="/admin/settings">全站預設</a>。</p>
+		</div>
 		<p>
 			<label>
 				<input name="raw_mode" type="checkbox" checked/>
 				<strong>raw_mode</strong>：原檔全螢幕直送（沒有站台頂欄）
 			</label>
 		</p>
+		<script src="/static/js/visibility-password.js" defer></script>
 		<p class="meta">
 			<strong>關 raw_mode</strong>：保留站台導覽／主題，內容用
 			<strong>iframe 框</strong>載入完整頁（相對路徑仍正常）。

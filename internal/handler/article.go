@@ -119,7 +119,7 @@ func (h *ArticleAdmin) Update(c fiber.Ctx) error {
 	var updated model.Article
 	if existing.Type == model.ArticleTypeHTMLUpload {
 		// Metadata only — never overwrite Body (entry file path) from a markdown form.
-		updated = htmlUploadFromForm(c, existing)
+		updated = htmlUploadFromForm(c, existing, h.hasher)
 		stampPublishedAt(&updated, &existing, now)
 	} else {
 		updated = articleFromForm(c)
@@ -183,8 +183,9 @@ func (h *ArticleAdmin) Delete(c fiber.Ctx) error {
 }
 
 // htmlUploadFromForm updates only metadata for html_upload articles.
-// Body (entry path), Type, Password, PreviewToken, CreatedAt are preserved.
-func htmlUploadFromForm(c fiber.Ctx, existing model.Article) model.Article {
+// Body (entry path), Type, PreviewToken, CreatedAt are preserved.
+// Password uses keep-or-hash semantics (blank keeps existing hash).
+func htmlUploadFromForm(c fiber.Ctx, existing model.Article, hasher auth.PasswordHasher) model.Article {
 	a := existing
 	a.Slug = strings.Clone(strings.TrimSpace(c.FormValue("slug")))
 	a.Title = strings.Clone(strings.TrimSpace(c.FormValue("title")))
@@ -193,6 +194,7 @@ func htmlUploadFromForm(c fiber.Ctx, existing model.Article) model.Article {
 	a.RawMode = c.FormValue("raw_mode") == "on"
 	a.Pinned = c.FormValue("pinned") == "on"
 	a.Tags = parseTags(c.FormValue("tags"))
+	a.Password = keepOrHashPassword(c, hasher, existing.Password)
 	return a
 }
 

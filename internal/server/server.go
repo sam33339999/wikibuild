@@ -83,7 +83,7 @@ func New(d Deps) *fiber.App {
 	})
 	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher, d.Clock, d.ContentDir)
 	settings := handler.NewSettings(d.Store)
-	uploads := handler.NewUpload(d.Store, d.ContentDir)
+	uploads := handler.NewUpload(d.Store, d.ContentDir, d.Hasher)
 	mediaH := handler.NewMedia(mediaDir(d))
 	tags := handler.NewTags(d.Store)
 	redirects := handler.NewRedirects(d.Store)

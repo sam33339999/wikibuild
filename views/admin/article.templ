@@ -124,13 +124,29 @@ templ ArticleForm(action string, a *model.Article, csrfToken string) {
 		</p>
 		<p>
 			<label>可見性
-				<select name="visibility">
-					<option value="public" selected?={ a.Visibility == model.VisibilityPublic }>public</option>
-					<option value="protected" selected?={ a.Visibility == model.VisibilityProtected }>protected</option>
-					<option value="private" selected?={ a.Visibility == model.VisibilityPrivate }>private</option>
+				<select name="visibility" id="visibility">
+					<option value="public" selected?={ a.Visibility == model.VisibilityPublic }>public — 公開</option>
+					<option value="protected" selected?={ a.Visibility == model.VisibilityProtected }>protected — 需密碼</option>
+					<option value="private" selected?={ a.Visibility == model.VisibilityPrivate }>private — 僅 admin</option>
 				</select>
 			</label>
 		</p>
+		<div id="protected-password-fields" class="protected-password-box">
+			<p>
+				<label>
+					本篇 protected 密碼<br/>
+					<input name="password" type="password" autocomplete="new-password" placeholder="設定或變更密碼"/>
+				</label>
+			</p>
+			<p class="meta">
+				僅在可見性為 <strong>protected</strong> 時使用。
+				留空：編輯時保留原密碼；新文章則使用
+				<a href="/admin/settings">全站預設 protected 密碼</a>。
+				if a.Visibility == model.VisibilityProtected && a.Password != "" {
+					<span>目前已設定本篇專用密碼。</span>
+				}
+			</p>
+		</div>
 		<p><label><input name="pinned" type="checkbox" checked?={ a.Pinned }/> 置頂</label></p>
 		<p>
 			<label>排程發布（datetime-local，草稿在時間到後由排程器發布；立即 published 會忽略）<br/>
@@ -145,13 +161,9 @@ templ ArticleForm(action string, a *model.Article, csrfToken string) {
 				<label><input name="regen_preview" type="checkbox"/> 重新產生預覽 token</label>
 			</p>
 		}
-		<p>
-			<label>protected 密碼（留空用全站預設；編輯時留空=保留原密碼）<br/>
-				<input name="password" type="password" autocomplete="new-password"/>
-			</label>
-		</p>
 		<p><button type="submit">儲存</button></p>
 	</form>
+	<script src="/static/js/visibility-password.js" defer></script>
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.css"/>
 	<script src="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js"></script>
 	<script src="/static/js/editor.js" defer></script>
@@ -187,13 +199,29 @@ templ HTMLUploadEdit(action string, a *model.Article, csrfToken string) {
 		</p>
 		<p>
 			<label>可見性
-				<select name="visibility">
-					<option value="public" selected?={ a.Visibility == model.VisibilityPublic }>public</option>
-					<option value="protected" selected?={ a.Visibility == model.VisibilityProtected }>protected</option>
-					<option value="private" selected?={ a.Visibility == model.VisibilityPrivate }>private</option>
+				<select name="visibility" id="visibility">
+					<option value="public" selected?={ a.Visibility == model.VisibilityPublic }>public — 公開</option>
+					<option value="protected" selected?={ a.Visibility == model.VisibilityProtected }>protected — 需密碼</option>
+					<option value="private" selected?={ a.Visibility == model.VisibilityPrivate }>private — 僅 admin</option>
 				</select>
 			</label>
 		</p>
+		<div id="protected-password-fields" class="protected-password-box">
+			<p>
+				<label>
+					本篇 protected 密碼<br/>
+					<input name="password" type="password" autocomplete="new-password" placeholder="設定或變更密碼"/>
+				</label>
+			</p>
+			<p class="meta">
+				僅在可見性為 <strong>protected</strong> 時使用。
+				留空：保留原密碼；若從未設定則用
+				<a href="/admin/settings">全站預設 protected 密碼</a>。
+				if a.Visibility == model.VisibilityProtected && a.Password != "" {
+					<span>目前已設定本篇專用密碼。</span>
+				}
+			</p>
+		</div>
 		<p><label><input name="pinned" type="checkbox" checked?={ a.Pinned }/> 置頂</label></p>
 		<p>
 			<label>
@@ -204,6 +232,7 @@ templ HTMLUploadEdit(action string, a *model.Article, csrfToken string) {
 		<p class="meta">若要更換 HTML／zip 內容，請刪除此篇後重新上傳（同 slug 可重建）。</p>
 		<p><button type="submit">儲存</button></p>
 	</form>
+	<script src="/static/js/visibility-password.js" defer></script>
 	<form method="post" action={ "/admin/" + strconv.FormatInt(a.ID, 10) + "/delete" } onsubmit="return confirm('確定刪除？上傳檔案也會一併移除');">
 		<input type="hidden" name="_csrf" value={ csrfToken }/>
 		<p><button type="submit">刪除此篇</button></p>

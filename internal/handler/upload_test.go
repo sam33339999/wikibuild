@@ -24,7 +24,7 @@ func uploadApp(t *testing.T) (*fiber.App, store.Repository, string) {
 	t.Helper()
 	repo := inmem.New()
 	dir := t.TempDir()
-	h := handler.NewUpload(repo, dir)
+	h := handler.NewUpload(repo, dir, fakeHasher{})
 	app := fiber.New()
 	app.Get("/admin/upload", h.Form)
 	app.Post("/admin/upload", h.Submit)

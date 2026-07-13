@@ -456,6 +456,22 @@ th { color: var(--fg-muted); font-weight: 600; }
   max-width: min(96rem, 96vw);
 }
 
+/* Protected password panel (shown when visibility=protected) */
+.protected-password-box {
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+.protected-password-box.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.protected-password-box[hidden] {
+  display: none !important;
+}
+
 /* Lucide inline helpers */
 .icon {
   display: inline-block;

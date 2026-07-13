@@ -254,6 +254,46 @@ func TestArticleAdmin_UpdateHTMLUpload_PreservesBody(t *testing.T) {
 	require.Equal(t, model.ArticleTypeHTMLUpload, got.Type)
 }
 
+func TestArticleAdmin_UpdateHTMLUpload_SetsPassword(t *testing.T) {
+	app, repo := articleApp(t)
+	a, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "prot-html", Title: "P", Body: "index.html",
+		Type: model.ArticleTypeHTMLUpload, Status: model.StatusPublished,
+		Visibility: model.VisibilityPublic, RawMode: true,
+	})
+	require.NoError(t, err)
+
+	f := url.Values{}
+	f.Set("slug", "prot-html")
+	f.Set("title", "P")
+	f.Set("status", "published")
+	f.Set("visibility", "protected")
+	f.Set("password", "secret123")
+	f.Set("raw_mode", "on")
+	resp := postArticle(app, "/admin/"+strconv.FormatInt(a.ID, 10), f)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+
+	got, err := repo.GetArticle(context.Background(), a.ID)
+	require.NoError(t, err)
+	require.Equal(t, model.VisibilityProtected, got.Visibility)
+	require.Equal(t, "H:secret123", got.Password) // fakeHasher
+}
+
+func TestArticleAdmin_EditHTMLUpload_HasPasswordField(t *testing.T) {
+	app, repo := articleApp(t)
+	a, err := repo.CreateArticle(context.Background(), model.Article{
+		Slug: "up", Title: "Upload", Body: "index.html",
+		Type: model.ArticleTypeHTMLUpload, Status: model.StatusPublished,
+		Visibility: model.VisibilityProtected, RawMode: true, Password: "H:x",
+	})
+	require.NoError(t, err)
+	resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/admin/"+strconv.FormatInt(a.ID, 10)+"/edit", nil))
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	require.Contains(t, string(body), `name="password"`)
+	require.Contains(t, string(body), "protected-password-fields")
+}
+
 func TestArticleAdmin_Delete(t *testing.T) {
 	app, repo := articleApp(t)
 	a, err := repo.CreateArticle(context.Background(), model.Article{

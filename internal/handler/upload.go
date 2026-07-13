@@ -13,6 +13,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/csrf"
+	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/store"
 	adminviews "github.com/sam33339999/wikibuild/views/admin"
@@ -30,11 +31,12 @@ var safeSlugRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]*$`)
 type Upload struct {
 	repo       store.Repository
 	contentDir string
+	hasher     auth.PasswordHasher
 }
 
-// NewUpload builds an Upload handler.
-func NewUpload(repo store.Repository, contentDir string) *Upload {
-	return &Upload{repo: repo, contentDir: contentDir}
+// NewUpload builds an Upload handler. hasher may be nil (no per-article password).
+func NewUpload(repo store.Repository, contentDir string, hasher auth.PasswordHasher) *Upload {
+	return &Upload{repo: repo, contentDir: contentDir, hasher: hasher}
 }
 
 // Form renders the upload page.
@@ -109,6 +111,9 @@ func (h *Upload) Submit(c fiber.Ctx) error {
 		Body:       entry,
 		RawMode:    c.FormValue("raw_mode") == "on",
 		Tags:       []string{},
+	}
+	if h.hasher != nil {
+		a.Password = hashPasswordIfSet(c, h.hasher)
 	}
 	if _, err := h.repo.CreateArticle(c.Context(), a); err != nil {
 		_ = os.RemoveAll(target) // roll back the extraction
