@@ -50,6 +50,7 @@ func articleForm() url.Values {
 	f.Set("tags", "go, web")
 	f.Set("status", "draft")
 	f.Set("visibility", "public")
+	f.Set("show_toc", "on")
 	return f
 }
 
@@ -204,7 +205,11 @@ func TestArticleAdmin_List_HasCSRFOnDelete(t *testing.T) {
 	// Without CSRF middleware TokenFromContext may be empty, but the hidden field must exist.
 	require.Contains(t, string(body), `name="_csrf"`)
 	require.Contains(t, string(body), `/delete`)
-	require.Contains(t, string(body), "Markdown")
+	// Status + visibility merged into pills; type/slug columns omitted.
+	require.Contains(t, string(body), "status-draft")
+	require.Contains(t, string(body), "vis-public")
+	require.NotContains(t, string(body), "<th>slug</th>")
+	require.NotContains(t, string(body), "<th>類型</th>")
 }
 
 func TestArticleAdmin_EditHTMLUpload_UsesMetaForm(t *testing.T) {

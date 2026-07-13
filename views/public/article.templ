@@ -15,85 +15,109 @@ type CommentConfig struct {
 	Category string // giscus category name
 }
 
-// Article renders a single article: title, meta (date, reading time),
-// optional table of contents, and the rendered body. html is trusted
-// (produced by our renderer which escapes raw HTML), inserted via templ.Raw.
+// Article renders a markdown article with optional floating TOC panel.
+// html is trusted (from our renderer). When toc is empty or ShowTOC is false,
+// the panel is omitted. TOC never steals horizontal space from the article.
 templ Article(a model.Article, html string, toc []render.Heading, readingMinutes int, backlinks []model.Article, comments CommentConfig) {
-	<article>
-		<h1>{ a.Title }</h1>
-		if a.PublishedAt != nil || readingMinutes > 0 {
-			<p class="meta">
-				if a.PublishedAt != nil {
-					<time>{ formatDate(a.PublishedAt) }</time>
+	<div class={ "article-layout", templ.KV("has-toc", a.ShowTOC && len(toc) > 0) }>
+		<article class="article-main">
+			<header class="article-head">
+				if a.ShowTOC && len(toc) > 0 {
+					<button type="button" id="toc-open" class="toc-inline-btn" title="顯示目錄" aria-controls="toc-sidebar" aria-expanded="false">
+						<i data-lucide="list" class="icon icon-sm" aria-hidden="true"></i>
+						<span>目錄</span>
+					</button>
 				}
-				if readingMinutes > 0 {
-					<span>· { strconv.Itoa(readingMinutes) } 分鐘閱讀</span>
+				<h1 class="article-title">{ a.Title }</h1>
+				if a.PublishedAt != nil || readingMinutes > 0 {
+					<p class="meta article-meta">
+						if a.PublishedAt != nil {
+							<time>{ formatDate(a.PublishedAt) }</time>
+						}
+						if readingMinutes > 0 {
+							<span class="meta-sep">·</span>
+							<span>{ strconv.Itoa(readingMinutes) } 分鐘閱讀</span>
+						}
+					</p>
 				}
-			</p>
-		}
-		if len(a.Tags) > 0 {
-			<p class="tags">
-				for i, t := range a.Tags {
-					if i > 0 {
-						{ ", " }
+				if len(a.Tags) > 0 {
+					<p class="tags article-tags">
+						for _, t := range a.Tags {
+							<a class="tag-chip" href={ "/tag/" + t }>{ t }</a>
+						}
+					</p>
+				}
+			</header>
+			<div class="content">@templ.Raw(html)</div>
+			if len(backlinks) > 0 {
+				<nav class="backlinks">
+					<h2>連回此頁的文章</h2>
+					<ul>
+						for _, b := range backlinks {
+							<li><a href={ "/" + b.Slug }>{ b.Title }</a></li>
+						}
+					</ul>
+				</nav>
+			}
+			if comments.Provider != "" && comments.Repo != "" {
+				<section class="comments">
+					<h2>留言</h2>
+					if comments.Provider == "giscus" {
+						<script src="https://giscus.app/client.js"
+							data-repo={ comments.Repo }
+							data-repo-id=""
+							data-category={ comments.Category }
+							data-category-id=""
+							data-mapping="pathname"
+							data-strict="0"
+							data-reactions-enabled="1"
+							data-emit-metadata="0"
+							data-input-position="bottom"
+							data-theme="preferred_color_scheme"
+							data-lang="zh-TW"
+							crossorigin="anonymous"
+							async>
+						</script>
 					}
-					<a href={ "/tag/" + t }>{ t }</a>
-				}
-			</p>
-		}
-		if len(toc) > 0 {
-			<nav class="toc">
-				<h2>目錄</h2>
-				<ul>
-					for _, h := range toc {
-						<li style={ "margin-left:" + strconv.Itoa((h.Level-1)*1) + "rem" }>
-							<a href={ "#" + h.ID }>{ h.Text }</a>
-						</li>
+					if comments.Provider == "utterances" {
+						<script src="https://utteranc.es/client.js"
+							repo={ comments.Repo }
+							issue-term="pathname"
+							theme="preferred-color-scheme"
+							crossorigin="anonymous"
+							async>
+						</script>
 					}
-				</ul>
-			</nav>
-		}
-		<div class="content">@templ.Raw(html)</div>
-		if len(backlinks) > 0 {
-			<nav class="backlinks">
-				<h2>連回此頁的文章</h2>
-				<ul>
-					for _, b := range backlinks {
-						<li><a href={ "/" + b.Slug }>{ b.Title }</a></li>
-					}
-				</ul>
-			</nav>
-		}
-		if comments.Provider != "" && comments.Repo != "" {
-			<section class="comments">
-				<h2>留言</h2>
-				if comments.Provider == "giscus" {
-					<script src="https://giscus.app/client.js"
-						data-repo={ comments.Repo }
-						data-repo-id=""
-						data-category={ comments.Category }
-						data-category-id=""
-						data-mapping="pathname"
-						data-strict="0"
-						data-reactions-enabled="1"
-						data-emit-metadata="0"
-						data-input-position="bottom"
-						data-theme="preferred_color_scheme"
-						data-lang="zh-TW"
-						crossorigin="anonymous"
-						async>
-					</script>
-				}
-				if comments.Provider == "utterances" {
-					<script src="https://utteranc.es/client.js"
-						repo={ comments.Repo }
-						issue-term="pathname"
-						theme="preferred-color-scheme"
-						crossorigin="anonymous"
-						async>
-					</script>
-				}
-			</section>
-		}
-	</article>
+				</section>
+			}
+		</article>
+	</div>
+	if a.ShowTOC && len(toc) > 0 {
+		// Floating panel + FAB — siblings of layout so they never affect measure.
+		<div id="toc-backdrop" class="toc-backdrop" hidden></div>
+		<aside id="toc-sidebar" class="toc-sidebar" aria-label="目錄" hidden>
+			<div class="toc-sidebar-inner">
+				<header class="toc-sidebar-head">
+					<span class="toc-sidebar-title">目錄</span>
+					<button type="button" id="toc-close" class="toc-icon-btn" title="關閉目錄" aria-label="關閉目錄">
+						<i data-lucide="x" class="icon icon-sm" aria-hidden="true"></i>
+					</button>
+				</header>
+				<nav class="toc-nav">
+					<ul>
+						for _, h := range toc {
+							<li class={ "toc-l" + strconv.Itoa(h.Level) }>
+								<a href={ "#" + h.ID }>{ h.Text }</a>
+							</li>
+						}
+					</ul>
+				</nav>
+			</div>
+		</aside>
+		<button type="button" id="toc-fab" class="toc-fab" hidden title="顯示目錄" aria-controls="toc-sidebar" aria-expanded="false">
+			<i data-lucide="list" class="icon icon-sm" aria-hidden="true"></i>
+			<span>目錄</span>
+		</button>
+		<script src="/static/js/toc-sidebar.js" defer></script>
+	}
 }

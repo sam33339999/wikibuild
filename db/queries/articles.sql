@@ -1,9 +1,9 @@
 -- name: CreateArticle :one
 INSERT INTO articles (
-    slug, title, type, status, visibility, password, raw_mode, pinned,
+    slug, title, type, status, visibility, password, raw_mode, pinned, show_toc,
     body, tags, created_at, updated_at, published_at, publish_at, preview_token
 ) VALUES (
-    @slug, @title, @type, @status, @visibility, @password, @raw_mode, @pinned,
+    @slug, @title, @type, @status, @visibility, @password, @raw_mode, @pinned, @show_toc,
     @body, @tags,
     COALESCE(sqlc.narg('created_at'), now()),
     COALESCE(sqlc.narg('updated_at'), now()),
@@ -32,6 +32,7 @@ UPDATE articles SET
     password      = @password,
     raw_mode      = @raw_mode,
     pinned        = @pinned,
+    show_toc      = @show_toc,
     body          = @body,
     tags          = @tags,
     updated_at    = COALESCE(sqlc.narg('updated_at'), now()),

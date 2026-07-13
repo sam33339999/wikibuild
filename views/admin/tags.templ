@@ -9,6 +9,7 @@ import (
 // TagList renders the admin tag management page: a table of tags with
 // counts, plus rename and merge forms. message is an optional flash string.
 templ TagList(tags []store.TagCount, csrfToken string, message string) {
+	<div class="admin-page">
 	<h1>標籤管理</h1>
 	<p><a href="/admin">← 文章列表</a></p>
 	if message != "" {
@@ -17,19 +18,21 @@ templ TagList(tags []store.TagCount, csrfToken string, message string) {
 	if len(tags) == 0 {
 		<p>尚無標籤。在文章編輯表單以逗號分隔輸入標籤後會出現在此。</p>
 	} else {
-		<table>
-			<thead>
-				<tr><th>標籤</th><th>文章數</th></tr>
-			</thead>
-			<tbody>
-				for _, t := range tags {
-					<tr>
-						<td><code>{ t.Name }</code></td>
-						<td>{ strconv.Itoa(t.Count) }</td>
-					</tr>
-				}
-			</tbody>
-		</table>
+		<div class="table-scroll">
+			<table>
+				<thead>
+					<tr><th>標籤</th><th>文章數</th></tr>
+				</thead>
+				<tbody>
+					for _, t := range tags {
+						<tr>
+							<td><code>{ t.Name }</code></td>
+							<td>{ strconv.Itoa(t.Count) }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
 	}
 	<section>
 		<h2>重新命名</h2>
@@ -58,4 +61,5 @@ templ TagList(tags []store.TagCount, csrfToken string, message string) {
 			<p><button type="submit">合併</button></p>
 		</form>
 	</section>
+	</div>
 }

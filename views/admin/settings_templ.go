@@ -47,7 +47,7 @@ func Settings(data SettingsData, csrfToken string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"settings-page\"><header class=\"settings-hero\"><p class=\"eyebrow\">Workbench · Settings</p><h1>站台設定</h1><p class=\"lede\">工程手帳 × 作品集：管理對外形象、隱私與讀者互動。</p></header><form method=\"post\" action=\"/admin/settings\" class=\"settings-form\"><input type=\"hidden\" name=\"_csrf\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"settings-page admin-page\"><header class=\"settings-hero\"><p class=\"eyebrow\">Workbench · Settings</p><h1>站台設定</h1><p class=\"lede\">工程手帳 × 作品集：管理對外形象、隱私與讀者互動。</p></header><form method=\"post\" action=\"/admin/settings\" class=\"settings-form\"><input type=\"hidden\" name=\"_csrf\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

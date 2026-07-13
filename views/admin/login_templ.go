@@ -30,7 +30,7 @@ func Login(csrfToken string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Workbench · 登入</title><script>\n\t\t\t\t(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();\n\t\t\t</script><link rel=\"stylesheet\" href=\"/static/css/site.css\"></head><body class=\"theme-khaki login-page\"><div class=\"login-card\"><p class=\"eyebrow\">Workbench</p><h1>工程手帳後台</h1><form method=\"post\" action=\"/admin/login\"><input type=\"hidden\" name=\"_csrf\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Workbench · 登入</title><script>\n\t\t\t\t(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();\n\t\t\t</script><link rel=\"stylesheet\" href=\"/static/css/site.css\"></head><body class=\"theme-claude login-page\"><div class=\"login-card\"><p class=\"eyebrow\">後台</p><h1>登入</h1><form method=\"post\" action=\"/admin/login\"><input type=\"hidden\" name=\"_csrf\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

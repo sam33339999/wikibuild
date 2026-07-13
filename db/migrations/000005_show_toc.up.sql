@@ -1,0 +1,1 @@
+ALTER TABLE articles ADD COLUMN show_toc BOOLEAN NOT NULL DEFAULT true;

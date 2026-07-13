@@ -18,6 +18,7 @@ CREATE TABLE articles (
     password      TEXT      NOT NULL DEFAULT '',
     raw_mode      BOOLEAN   NOT NULL DEFAULT false,
     pinned        BOOLEAN   NOT NULL DEFAULT false,
+    show_toc      BOOLEAN   NOT NULL DEFAULT true,
     body          TEXT      NOT NULL DEFAULT '',
     tags          TEXT[]    NOT NULL DEFAULT '{}',
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),

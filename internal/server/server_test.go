@@ -566,7 +566,8 @@ func TestServer_LayoutIncludesThemeChrome(t *testing.T) {
 	require.Contains(t, s, `wikibuild-theme`) // FOUC-prevention script
 	require.Contains(t, s, `class="site-header"`)
 	require.Contains(t, s, `lucide@`)
-	require.Contains(t, s, `data-lucide="home"`)
+	require.Contains(t, s, `theme-claude`)
+	require.Contains(t, s, `fonts.googleapis.com`)
 	require.Contains(t, s, `/static/js/icons.js`)
 }
 

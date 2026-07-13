@@ -34,6 +34,7 @@ type Article struct {
 	Password     string
 	RawMode      bool
 	Pinned       bool
+	ShowTOC      bool // markdown: render collapsible TOC sidebar (default true)
 	Body         string
 	Tags         []string
 	CreatedAt    time.Time

@@ -348,6 +348,38 @@ func TestPublic_HtmlUpload_ContentEndpoint_HasBase(t *testing.T) {
 
 // --- wikilinks + backlinks (M4.2) ---
 
+func TestPublic_TOC_SidebarWhenEnabled(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedArticle(t, repo, "toc-on", "With TOC", "# One\n\n## Two\n\ntext", model.StatusPublished, model.VisibilityPublic)
+	// seedArticle doesn't set ShowTOC — default false on zero value. Fix:
+	a, _ := repo.GetArticleBySlug(context.Background(), "toc-on")
+	a.ShowTOC = true
+	_, _ = repo.UpdateArticle(context.Background(), a)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/toc-on", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `id="toc-sidebar"`)
+	require.Contains(t, s, `id="toc-fab"`)
+	require.Contains(t, s, `id="toc-backdrop"`)
+	require.Contains(t, s, `article-layout has-toc`)
+	require.Contains(t, s, "toc-sidebar.js")
+	require.Contains(t, s, "One")
+}
+
+func TestPublic_TOC_HiddenWhenDisabled(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedArticle(t, repo, "toc-off", "No TOC", "# One\n\n## Two\n\ntext", model.StatusPublished, model.VisibilityPublic)
+	a, _ := repo.GetArticleBySlug(context.Background(), "toc-off")
+	a.ShowTOC = false
+	_, _ = repo.UpdateArticle(context.Background(), a)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/toc-off", nil))
+	body, _ := io.ReadAll(resp.Body)
+	require.NotContains(t, string(body), `id="toc-sidebar"`)
+}
+
 func TestPublic_WikilinkRenderedAsLink(t *testing.T) {
 	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "alpha", "Alpha", "Link to [[beta]] here.", model.StatusPublished, model.VisibilityPublic)

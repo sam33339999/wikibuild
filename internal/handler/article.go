@@ -61,7 +61,7 @@ func (h *ArticleAdmin) List(c fiber.Ctx) error {
 // NewForm renders a blank article form.
 func (h *ArticleAdmin) NewForm(c fiber.Ctx) error {
 	return renderPage(c, "新增文章", adminviews.ArticleForm("/admin/new", &model.Article{
-		Status: model.StatusDraft, Visibility: model.VisibilityPublic,
+		Status: model.StatusDraft, Visibility: model.VisibilityPublic, ShowTOC: true,
 	}, csrf.TokenFromContext(c)))
 }
 
@@ -219,6 +219,7 @@ func articleFromForm(c fiber.Ctx) model.Article {
 		Status:     model.Status(strings.Clone(c.FormValue("status"))),
 		Visibility: model.Visibility(strings.Clone(c.FormValue("visibility"))),
 		Pinned:     c.FormValue("pinned") == "on",
+		ShowTOC:    c.FormValue("show_toc") == "on",
 	}
 	if raw := strings.TrimSpace(c.FormValue("publish_at")); raw != "" {
 		if t, err := parseFormTime(raw); err == nil {

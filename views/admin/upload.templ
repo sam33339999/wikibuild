@@ -5,6 +5,7 @@ package admin
 // raw_mode defaults to ON: multi-page zips with relative paths (css/, slides/)
 // need the original document + <base href="/slug/"> to work.
 templ Upload(csrfToken string) {
+	<div class="admin-page">
 	<h1>上傳 HTML</h1>
 	<p class="meta">
 		適用完整靜態頁／簡報 zip（可含 <code>slides/</code>、<code>css/</code> 等相對路徑）。
@@ -54,4 +55,5 @@ templ Upload(csrfToken string) {
 		</p>
 		<p><button type="submit">上傳</button></p>
 	</form>
+	</div>
 }

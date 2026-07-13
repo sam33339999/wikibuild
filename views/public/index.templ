@@ -10,7 +10,7 @@ import (
 // Index renders the homepage: brand intro (portfolio) + works list (notebook).
 templ Index(brand sitebrand.Brand, items []model.Article, page, totalPages int) {
 	<section class="home-hero">
-		<p class="eyebrow">Portfolio · Field notes</p>
+		<p class="eyebrow">筆記 · 作品</p>
 		if brand.Author != "" {
 			<h1 class="hero-title">{ brand.Author }</h1>
 		} else {
@@ -46,8 +46,8 @@ templ Index(brand sitebrand.Brand, items []model.Article, page, totalPages int) 
 
 	<section class="works">
 		<header class="works-head">
-			<h2>Works</h2>
-			<p class="meta">置頂優先 · 公開已發布</p>
+			<h2>文章</h2>
+			<p class="meta">置頂優先 · 已發布</p>
 		</header>
 		if len(items) == 0 {
 			<p class="empty-works">尚無公開作品。從後台新增 Markdown 或上傳 HTML。</p>

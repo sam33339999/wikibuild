@@ -34,6 +34,9 @@ templ Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand
 			<script>
 				(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
 			</script>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650&family=Noto+Sans+TC:wght@400;500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet"/>
 			<link rel="stylesheet" href="/static/css/site.css"/>
 			<link rel="stylesheet" href="/static/css/editor.css"/>
 			if seo.BaseHref != "" {
@@ -71,7 +74,7 @@ templ Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand
 				@templ.Raw(`<script type="application/ld+json">` + seo.JSONLD + `</script>`)
 			}
 		</head>
-		<body class="theme-khaki">
+		<body class="theme-claude">
 			<header class="site-header">
 				<a class="brand" href="/">
 					<span class="brand-mark" aria-hidden="true"></span>
@@ -84,24 +87,19 @@ templ Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand
 				</a>
 				<nav class="site-nav" aria-label="主要">
 					<a href="/">
-						<i data-lucide="home" class="icon icon-sm" aria-hidden="true"></i>
-						<span>Works</span>
+						<span>首頁</span>
 					</a>
 					<a href="/search">
-						<i data-lucide="search" class="icon icon-sm" aria-hidden="true"></i>
 						<span>搜尋</span>
 					</a>
 					<a href="/archive">
-						<i data-lucide="calendar-days" class="icon icon-sm" aria-hidden="true"></i>
 						<span>封存</span>
 					</a>
 					<a href="/feed">
-						<i data-lucide="rss" class="icon icon-sm" aria-hidden="true"></i>
 						<span>RSS</span>
 					</a>
-					<a href="/admin">
-						<i data-lucide="terminal" class="icon icon-sm" aria-hidden="true"></i>
-						<span>Workbench</span>
+					<a href="/admin" class="nav-quiet">
+						<span>後台</span>
 					</a>
 					<span class="theme-switcher" role="group" aria-label="主題">
 						<button type="button" data-theme-set="light" aria-pressed="false" title="淺色">

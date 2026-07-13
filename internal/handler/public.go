@@ -181,6 +181,9 @@ func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
 	}
 	if a.Type != model.ArticleTypeHTMLUpload {
 		html, toc := render.RenderWithTOC(a.Body)
+		if !a.ShowTOC {
+			toc = nil
+		}
 		return renderPageSEO(c, a.Title, publicviews.Article(
 			a, html, toc, render.ReadingTime(a.Body), h.backlinksFor(c, a), comments), pageSEO)
 	}

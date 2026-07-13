@@ -33,20 +33,20 @@ func Upload(csrfToken string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<h1>上傳 HTML</h1><p class=\"meta\">適用完整靜態頁／簡報 zip（可含 <code>slides/</code>、<code>css/</code> 等相對路徑）。</p><form method=\"post\" action=\"/admin/upload\" enctype=\"multipart/form-data\"><input type=\"hidden\" name=\"_csrf\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"admin-page\"><h1>上傳 HTML</h1><p class=\"meta\">適用完整靜態頁／簡報 zip（可含 <code>slides/</code>、<code>css/</code> 等相對路徑）。</p><form method=\"post\" action=\"/admin/upload\" enctype=\"multipart/form-data\"><input type=\"hidden\" name=\"_csrf\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/upload.templ`, Line: 13, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/upload.templ`, Line: 14, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><p><label>slug<br><input name=\"slug\" required placeholder=\"my-deck\"></label></p><p><label>標題<br><input name=\"title\" required></label></p><p><label>檔案（.zip 含 index.html 與資產，或單一 .html）<br><input name=\"file\" type=\"file\" accept=\".zip,.html,.htm\" required></label></p><p><label>狀態 <select name=\"status\"><option value=\"draft\">draft</option> <option value=\"published\" selected>published</option></select></label></p><p><label>可見性 <select name=\"visibility\" id=\"visibility\"><option value=\"public\">public — 公開</option> <option value=\"protected\">protected — 需密碼</option> <option value=\"private\">private — 僅 admin</option></select></label></p><div id=\"protected-password-fields\" class=\"protected-password-box\" hidden><p><label>本篇 protected 密碼<br><input name=\"password\" type=\"password\" autocomplete=\"new-password\" placeholder=\"可留空，用全站預設\"></label></p><p class=\"meta\">選 protected 時可設本篇密碼；留空則用<a href=\"/admin/settings\">全站預設</a>。</p></div><p><label><input name=\"raw_mode\" type=\"checkbox\" checked> <strong>raw_mode</strong>：原檔全螢幕直送（沒有站台頂欄）</label></p><script src=\"/static/js/visibility-password.js\" defer></script><p class=\"meta\"><strong>關 raw_mode</strong>：保留站台導覽／主題，內容用 <strong>iframe 框</strong>載入完整頁（相對路徑仍正常）。 <strong>開 raw_mode</strong>：只有你的 HTML，適合投影／全螢幕簡報。</p><p><button type=\"submit\">上傳</button></p></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><p><label>slug<br><input name=\"slug\" required placeholder=\"my-deck\"></label></p><p><label>標題<br><input name=\"title\" required></label></p><p><label>檔案（.zip 含 index.html 與資產，或單一 .html）<br><input name=\"file\" type=\"file\" accept=\".zip,.html,.htm\" required></label></p><p><label>狀態 <select name=\"status\"><option value=\"draft\">draft</option> <option value=\"published\" selected>published</option></select></label></p><p><label>可見性 <select name=\"visibility\" id=\"visibility\"><option value=\"public\">public — 公開</option> <option value=\"protected\">protected — 需密碼</option> <option value=\"private\">private — 僅 admin</option></select></label></p><div id=\"protected-password-fields\" class=\"protected-password-box\" hidden><p><label>本篇 protected 密碼<br><input name=\"password\" type=\"password\" autocomplete=\"new-password\" placeholder=\"可留空，用全站預設\"></label></p><p class=\"meta\">選 protected 時可設本篇密碼；留空則用<a href=\"/admin/settings\">全站預設</a>。</p></div><p><label><input name=\"raw_mode\" type=\"checkbox\" checked> <strong>raw_mode</strong>：原檔全螢幕直送（沒有站台頂欄）</label></p><script src=\"/static/js/visibility-password.js\" defer></script><p class=\"meta\"><strong>關 raw_mode</strong>：保留站台導覽／主題，內容用 <strong>iframe 框</strong>載入完整頁（相對路徑仍正常）。 <strong>開 raw_mode</strong>：只有你的 HTML，適合投影／全螢幕簡報。</p><p><button type=\"submit\">上傳</button></p></form></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

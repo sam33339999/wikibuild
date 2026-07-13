@@ -37,7 +37,7 @@ func Index(brand sitebrand.Brand, items []model.Article, page, totalPages int) t
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"home-hero\"><p class=\"eyebrow\">Portfolio · Field notes</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<section class=\"home-hero\"><p class=\"eyebrow\">筆記 · 作品</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -177,7 +177,7 @@ func Index(brand sitebrand.Brand, items []model.Article, page, totalPages int) t
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a class=\"chip\" href=\"/feed\"><i data-lucide=\"rss\" class=\"icon icon-sm\" aria-hidden=\"true\"></i> RSS</a></div></section><section class=\"works\"><header class=\"works-head\"><h2>Works</h2><p class=\"meta\">置頂優先 · 公開已發布</p></header>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a class=\"chip\" href=\"/feed\"><i data-lucide=\"rss\" class=\"icon icon-sm\" aria-hidden=\"true\"></i> RSS</a></div></section><section class=\"works\"><header class=\"works-head\"><h2>文章</h2><p class=\"meta\">置頂優先 · 已發布</p></header>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
