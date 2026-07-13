@@ -47,7 +47,7 @@ func ArticleList(items []model.Article, q string, csrfToken string) templ.Compon
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"admin-page\"><h1>文章列表</h1><nav class=\"admin-nav\" aria-label=\"後台\"><a href=\"/admin/new\">＋ 新增文章</a> <a href=\"/admin/upload\">上傳 HTML</a> <a href=\"/admin/tags\">標籤管理</a> <a href=\"/admin/redirects\">導向</a> <a href=\"/admin/playground\">LLM Playground</a> <a href=\"/admin/settings\">設定</a></nav><form method=\"get\" action=\"/admin\" class=\"admin-search\"><p><label>搜尋 <input type=\"search\" name=\"q\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"admin-page\"><h1>文章列表</h1><nav class=\"admin-nav\" aria-label=\"後台\"><a href=\"/admin/new\">＋ 新增文章</a> <a href=\"/admin/upload\">上傳 HTML</a> <a href=\"/admin/tags\">標籤管理</a> <a href=\"/admin/redirects\">導向</a> <a href=\"/admin/playground\">LLM Streaming</a> <a href=\"/admin/settings\">設定</a></nav><form method=\"get\" action=\"/admin\" class=\"admin-search\"><p><label>搜尋 <input type=\"search\" name=\"q\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

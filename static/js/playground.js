@@ -1,6 +1,6 @@
 /**
- * Admin LLM playground — POST /admin/ai/chat/stream (SSE), render markdown live.
- * Expects marked + DOMPurify on window (CDN).
+ * LLM Streaming Playground — multi-turn chat via POST /admin/ai/chat/stream (SSE).
+ * Renders assistant turns with marked + DOMPurify (CDN).
  */
 (function () {
   "use strict";
@@ -10,14 +10,18 @@
   var clearBtn = document.getElementById("pg-clear");
   var msgEl = document.getElementById("pg-message");
   var sysEl = document.getElementById("pg-system");
+  var transcript = document.getElementById("pg-transcript");
   var outEl = document.getElementById("pg-output");
   var rawEl = document.getElementById("pg-raw");
   var statusEl = document.getElementById("pg-status");
   var showRaw = document.getElementById("pg-show-raw");
-  if (!sendBtn || !msgEl || !outEl) return;
+  if (!sendBtn || !msgEl || !transcript) return;
 
+  /** @type {{role:string, content:string}[]} */
+  var history = [];
   var abort = null;
-  var buf = "";
+  var streamBuf = "";
+  var streamNode = null;
 
   function csrfToken() {
     var el = document.querySelector('input[name="_csrf"]');
@@ -30,23 +34,50 @@
     statusEl.classList.toggle("ai-seo-error", !!isError);
   }
 
-  function render() {
-    if (rawEl) rawEl.textContent = buf;
+  function mdHTML(text) {
     if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
       try {
-        outEl.innerHTML = DOMPurify.sanitize(marked.parse(buf || ""));
+        return DOMPurify.sanitize(marked.parse(text || ""));
       } catch (e) {
-        outEl.textContent = buf;
+        /* fall through */
       }
-    } else {
-      outEl.textContent = buf;
     }
-    outEl.scrollTop = outEl.scrollHeight;
+    var d = document.createElement("div");
+    d.textContent = text || "";
+    return d.innerHTML;
+  }
+
+  function appendTurn(role, content, streaming) {
+    var wrap = document.createElement("div");
+    wrap.className = "pg-turn pg-turn-" + role + (streaming ? " is-streaming" : "");
+    var label = document.createElement("div");
+    label.className = "pg-turn-role meta";
+    label.textContent = role === "user" ? "You" : "Assistant";
+    var body = document.createElement("div");
+    body.className = "pg-turn-body content";
+    if (role === "user") {
+      body.textContent = content;
+    } else {
+      body.innerHTML = mdHTML(content);
+    }
+    wrap.appendChild(label);
+    wrap.appendChild(body);
+    transcript.appendChild(wrap);
+    transcript.scrollTop = transcript.scrollHeight;
+    return { wrap: wrap, body: body };
+  }
+
+  function updateStream(content) {
+    if (!streamNode) return;
+    streamNode.body.innerHTML = mdHTML(content);
+    if (rawEl) rawEl.textContent = content;
+    transcript.scrollTop = transcript.scrollHeight;
   }
 
   function setRunning(on) {
     sendBtn.disabled = on;
     if (stopBtn) stopBtn.disabled = !on;
+    if (msgEl) msgEl.disabled = on;
   }
 
   function stop() {
@@ -56,6 +87,14 @@
     }
     setRunning(false);
     setStatus("已停止", false);
+    if (streamNode) {
+      streamNode.wrap.classList.remove("is-streaming");
+      if (streamBuf) {
+        history.push({ role: "assistant", content: streamBuf });
+      }
+      streamNode = null;
+      streamBuf = "";
+    }
   }
 
   async function send() {
@@ -64,11 +103,20 @@
       setStatus("請輸入 message", true);
       return;
     }
-    buf = "";
-    render();
+    if (abort) return;
+
+    appendTurn("user", message, false);
+    history.push({ role: "user", content: message });
+    msgEl.value = "";
+
+    streamBuf = "";
+    streamNode = appendTurn("assistant", "", true);
     setRunning(true);
     setStatus("串流中…", false);
     abort = new AbortController();
+
+    // Prior turns only (exclude the user message we just appended — sent as message).
+    var prior = history.slice(0, -1);
 
     try {
       var res = await fetch("/admin/ai/chat/stream", {
@@ -83,18 +131,18 @@
         body: JSON.stringify({
           message: message,
           system: sysEl ? sysEl.value : "",
+          messages: prior,
         }),
       });
 
       if (!res.ok) {
         var errText = await res.text();
+        var errMsg = errText;
         try {
           var j = JSON.parse(errText);
-          throw new Error(j.error || res.statusText);
-        } catch (e) {
-          if (e.message && e.message !== errText) throw e;
-          throw new Error(errText || res.statusText);
-        }
+          errMsg = j.error || res.statusText;
+        } catch (e) {}
+        throw new Error(errMsg || res.statusText);
       }
 
       var reader = res.body.getReader();
@@ -112,9 +160,7 @@
           if (!line.startsWith("data:")) continue;
           var data = line.slice(5).trim();
           if (data === "[DONE]") {
-            setStatus("完成", false);
-            setRunning(false);
-            abort = null;
+            finishOK();
             return;
           }
           try {
@@ -124,33 +170,58 @@
               continue;
             }
             if (obj.delta) {
-              buf += obj.delta;
-              render();
+              streamBuf += obj.delta;
+              updateStream(streamBuf);
             }
           } catch (e) {
-            // ignore non-json lines
+            /* ignore */
           }
         }
       }
-      setStatus("完成", false);
+      finishOK();
     } catch (err) {
       if (err && err.name === "AbortError") {
         setStatus("已停止", false);
       } else {
         setStatus(String(err && err.message ? err.message : err), true);
+        if (streamNode && !streamBuf) {
+          streamNode.body.textContent = "(錯誤)";
+        }
       }
     } finally {
       setRunning(false);
       abort = null;
+      if (streamNode) {
+        streamNode.wrap.classList.remove("is-streaming");
+        streamNode = null;
+      }
     }
+  }
+
+  function finishOK() {
+    setStatus("完成", false);
+    if (streamBuf) {
+      history.push({ role: "assistant", content: streamBuf });
+    }
+    if (streamNode) {
+      streamNode.wrap.classList.remove("is-streaming");
+      streamNode = null;
+    }
+    streamBuf = "";
+    setRunning(false);
+    abort = null;
   }
 
   sendBtn.addEventListener("click", send);
   if (stopBtn) stopBtn.addEventListener("click", stop);
   if (clearBtn) {
     clearBtn.addEventListener("click", function () {
-      buf = "";
-      render();
+      if (abort) stop();
+      history = [];
+      streamBuf = "";
+      streamNode = null;
+      transcript.innerHTML = "";
+      if (rawEl) rawEl.textContent = "";
       setStatus("", false);
     });
   }

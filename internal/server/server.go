@@ -98,7 +98,7 @@ func New(d Deps) *fiber.App {
 	if oc, ok := llmClient.(*llm.OpenAIClient); ok {
 		modelName = oc.ModelName()
 	}
-	playground := handler.NewPlayground(llmClient, modelName)
+	playground := handler.NewPlayground(llmClient, modelName, nil)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir, d.Hasher)
 	mediaH := handler.NewMedia(mediaDir(d))

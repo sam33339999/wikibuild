@@ -8,7 +8,7 @@ package admin
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-// Playground is the admin LLM chat UI (streaming markdown preview).
+// Playground is the admin multi-turn LLM streaming chat UI.
 // When enabled is false, shows configuration help instead of the form.
 func Playground(enabled bool, model string, csrfToken string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
@@ -31,7 +31,7 @@ func Playground(enabled bool, model string, csrfToken string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"admin-page playground-page\"><h1>LLM Playground</h1><p><a href=\"/admin\">← 文章列表</a></p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"admin-page playground-page\"><h1>LLM Streaming Playground</h1><p><a href=\"/admin\">← 文章列表</a></p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -54,20 +54,20 @@ func Playground(enabled bool, model string, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</code> · OpenAI 兼容 <code>chat/completions</code> · <strong>streaming</strong>（SSE）· 僅後台，不會寫入文章</p><div class=\"playground-layout\"><div class=\"playground-input\"><label for=\"pg-system\">System（可選）</label> <textarea id=\"pg-system\" rows=\"3\" placeholder=\"你是有幫助的助理…\"></textarea> <label for=\"pg-message\">Message</label> <textarea id=\"pg-message\" rows=\"8\" placeholder=\"輸入問題…（Enter 送出，Shift+Enter 換行）\"></textarea><p class=\"playground-actions\"><button type=\"button\" id=\"pg-send\" class=\"ai-seo-btn\">送出（stream）</button> <button type=\"button\" id=\"pg-stop\" class=\"ai-seo-btn\" disabled>停止</button> <button type=\"button\" id=\"pg-clear\">清除輸出</button> <span id=\"pg-status\" class=\"meta\" aria-live=\"polite\"></span></p><input type=\"hidden\" name=\"_csrf\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</code> · OpenAI 兼容 <code>chat/completions</code> · <strong>SSE streaming</strong> · 多輪對話 · 僅後台，不會寫入文章</p><div class=\"playground-layout\"><div class=\"playground-input\"><label for=\"pg-system\">System（可選，全程共用）</label> <textarea id=\"pg-system\" rows=\"3\" placeholder=\"你是有幫助的助理…\"></textarea> <label for=\"pg-message\">Message</label> <textarea id=\"pg-message\" rows=\"5\" placeholder=\"輸入問題…（Enter 送出，Shift+Enter 換行）\"></textarea><p class=\"playground-actions\"><button type=\"button\" id=\"pg-send\" class=\"ai-seo-btn\">送出（stream）</button> <button type=\"button\" id=\"pg-stop\" class=\"ai-seo-btn\" disabled>停止</button> <button type=\"button\" id=\"pg-clear\">清除對話</button> <span id=\"pg-status\" class=\"meta\" aria-live=\"polite\"></span></p><input type=\"hidden\" name=\"_csrf\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/playground.templ`, Line: 32, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/playground.templ`, Line: 33, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"></div><div class=\"playground-output-wrap\"><div class=\"playground-tabs meta\"><span>串流輸出</span> <label class=\"playground-raw-toggle\"><input type=\"checkbox\" id=\"pg-show-raw\"> 顯示原始 Markdown</label></div><div id=\"pg-output\" class=\"playground-output content\" aria-live=\"polite\"></div><pre id=\"pg-raw\" class=\"playground-raw\" hidden></pre></div></div><script src=\"https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js\" defer></script> <script src=\"https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js\" defer></script> <script src=\"/static/js/playground.js\" defer></script>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><p class=\"meta\">對話歷史會一併送給模型（最多約 40 則）。</p></div><div class=\"playground-output-wrap\"><div class=\"playground-tabs meta\"><span>串流對話</span> <label class=\"playground-raw-toggle\"><input type=\"checkbox\" id=\"pg-show-raw\"> 顯示原始 Markdown</label></div><div id=\"pg-transcript\" class=\"playground-transcript\" aria-live=\"polite\"></div><div id=\"pg-output\" class=\"playground-output content playground-streaming\" hidden></div><pre id=\"pg-raw\" class=\"playground-raw\" hidden></pre></div></div><script src=\"https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js\" defer></script> <script src=\"https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js\" defer></script> <script src=\"/static/js/playground.js\" defer></script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

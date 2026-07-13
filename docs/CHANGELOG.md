@@ -28,10 +28,11 @@ SEO control, AI assist, editor search, and MCP. Spec: [`specs/v1.1-ai-seo-mcp.md
 - **HTML AI SEO** — strip upload HTML to plain text for GenerateSEO
 - **Auto OG** — `internal/ogimage` 1200×630 PNG → `/media/…` via `POST /admin/:id/ai/og`
 
-### LLM Playground (streaming)
-- Admin **LLM Playground** (`/admin/playground`)
-- `POST /admin/ai/chat/stream` SSE; OpenAI-compatible `stream: true`
-- Live Markdown preview (marked + DOMPurify CDN)
+### LLM Streaming Playground
+- Admin **LLM Streaming Playground** (`/admin/playground`)
+- Multi-turn history + `POST /admin/ai/chat/stream` SSE
+- OpenAI-compatible `stream: true`; live Markdown (marked + DOMPurify)
+- Docs: [`llm-playground.md`](./llm-playground.md)
 
 ## v1.0
 

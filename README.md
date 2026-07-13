@@ -74,5 +74,5 @@ make run               # 需本機有 sqlc/templ/migrate 時再 make generate
 
 | | |
 |--|--|
-| **現在** | **v1.1 complete** + **LLM Playground**（SSE streaming）：SEO · AI · 搜尋/相關 · OG · MCP · 後台 `/admin/playground` |
+| **現在** | **v1.1 complete** + **LLM Streaming Playground**（多輪 SSE）：SEO · AI · 搜尋/相關 · OG · MCP · [`/admin/playground`](docs/llm-playground.md) |
 | **規格** | [v1.1](docs/specs/v1.1-ai-seo-mcp.md) · [CHANGELOG](docs/CHANGELOG.md) |
