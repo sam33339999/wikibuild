@@ -300,8 +300,13 @@ func TestArticleAdmin_EditHTMLUpload_UsesMetaForm(t *testing.T) {
 	require.Contains(t, s, "編輯 HTML 上傳")
 	require.Contains(t, s, "raw_mode")
 	require.Contains(t, s, "index.html")
+	require.Contains(t, s, "SEO / 分享")
 	// Must not mount markdown Vditor for html_upload.
 	require.NotContains(t, s, `data-editor="vditor"`)
+	// AI SEO is markdown-only — do not show button or "missing LLM env" hint.
+	require.NotContains(t, s, `id="ai-seo-btn"`)
+	require.NotContains(t, s, "WIKIBUILD_LLM_")
+	require.NotContains(t, s, "AI 產生 SEO")
 }
 
 func TestArticleAdmin_UpdateHTMLUpload_PreservesBody(t *testing.T) {

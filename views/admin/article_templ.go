@@ -509,7 +509,7 @@ func ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled b
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = seoShareFields(a, llmEnabled).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = seoShareFields(a, true, llmEnabled).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -533,7 +533,7 @@ func ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled b
 
 // HTMLUploadEdit edits metadata for html_upload articles only.
 // Body is the entry file path on disk — never edited as markdown here.
-// llmEnabled is accepted for API symmetry; AI SEO is markdown-first (button hidden).
+// AI SEO is markdown-only (S2); no button and no "LLM not configured" hint here.
 func HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnabled bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -730,7 +730,7 @@ func HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnable
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = seoShareFields(a, false).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = seoShareFields(a, false, false).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -770,8 +770,9 @@ func HTMLUploadEdit(action string, a *model.Article, csrfToken string, llmEnable
 
 // seoShareFields is the shared SEO / social section for markdown and HTML upload forms.
 // Empty fields keep automatic public fallbacks (title / body clip / no OG image).
-// showAI enables the S2 generate button (markdown forms only when LLM configured).
-func seoShareFields(a *model.Article, showAI bool) templ.Component {
+// allowAI: markdown forms only. llmEnabled: show the generate button vs “not configured” hint.
+// When allowAI is false (html_upload), omit all AI SEO UI — no false “missing env” message.
+func seoShareFields(a *model.Article, allowAI bool, llmEnabled bool) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -796,28 +797,30 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if showAI {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<p class=\"ai-seo-actions\"><button type=\"button\" id=\"ai-seo-btn\" class=\"ai-seo-btn\" data-endpoint=\"/admin/ai/seo\" data-article-id=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var36 string
-			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatInt(a.ID, 10))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 287, Col: 50}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "\">AI 產生 SEO</button> <span id=\"ai-seo-status\" class=\"meta\" aria-live=\"polite\"></span></p><div id=\"ai-seo-outline\" class=\"ai-seo-outline\" hidden><p class=\"meta\"><strong>大綱（僅預覽，不存檔）</strong></p><ul id=\"ai-seo-outline-list\"></ul></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, "<p class=\"meta\">AI 產生 SEO：未設定 <code>WIKIBUILD_LLM_*</code>，按鈕已停用。</p>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
+		if allowAI {
+			if llmEnabled {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, "<p class=\"ai-seo-actions\"><button type=\"button\" id=\"ai-seo-btn\" class=\"ai-seo-btn\" data-endpoint=\"/admin/ai/seo\" data-article-id=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var36 string
+				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatInt(a.ID, 10))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 289, Col: 51}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "\">AI 產生 SEO</button> <span id=\"ai-seo-status\" class=\"meta\" aria-live=\"polite\"></span></p><div id=\"ai-seo-outline\" class=\"ai-seo-outline\" hidden><p class=\"meta\"><strong>大綱（僅預覽，不存檔）</strong></p><ul id=\"ai-seo-outline-list\"></ul></div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			} else {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, "<p class=\"meta\">AI 產生 SEO：未設定 <code>WIKIBUILD_LLM_*</code>，按鈕已停用（僅 Markdown 文章）。</p>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "<p><label>SEO 標題（可與顯示標題不同；空 = 用標題）<br><input name=\"seo_title\" value=\"")
@@ -827,7 +830,7 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.SEOTitle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 301, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 304, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 		if templ_7745c5c3_Err != nil {
@@ -840,7 +843,7 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 301, Col: 70}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 304, Col: 70}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var38)
 		if templ_7745c5c3_Err != nil {
@@ -853,7 +856,7 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(a.Summary)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 306, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 309, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -866,7 +869,7 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(a.MetaDescription)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 311, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 314, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -879,7 +882,7 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.CoverImageURL)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 316, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 319, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var41)
 		if templ_7745c5c3_Err != nil {
@@ -892,7 +895,7 @@ func seoShareFields(a *model.Article, showAI bool) templ.Component {
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue(a.OGImageURL)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 321, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/article.templ`, Line: 324, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 		if templ_7745c5c3_Err != nil {
