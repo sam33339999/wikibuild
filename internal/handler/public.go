@@ -3,6 +3,8 @@ package handler
 import (
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -35,17 +37,20 @@ type Public struct {
 	signer         *auth.Signer
 	hasher         auth.PasswordHasher
 	envDefaultPass string // fallback when no DB setting is set
+	contentDir     string // root for html_upload article files
 	pageSize       int
 }
 
 // NewPublic builds a Public handler. envDefaultPass is the fallback site-wide
 // password (from config) used when no settings-managed value exists.
-func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordHasher, envDefaultPass string) *Public {
+// contentDir is where html_upload articles' files live (<contentDir>/<slug>/).
+func NewPublic(repo store.Repository, signer *auth.Signer, hasher auth.PasswordHasher, envDefaultPass, contentDir string) *Public {
 	return &Public{
 		repo:           repo,
 		signer:         signer,
 		hasher:         hasher,
 		envDefaultPass: envDefaultPass,
+		contentDir:     contentDir,
 		pageSize:       defaultPageSize,
 	}
 }
@@ -89,8 +94,7 @@ func (h *Public) Article(c fiber.Ctx) error {
 	})
 	switch decision {
 	case gate.Allow:
-		html, toc := render.RenderWithTOC(a.Body)
-		return renderPage(c, a.Title, publicviews.Article(a, html, toc))
+		return h.renderArticle(c, a)
 	case gate.Password:
 		return c.Redirect().Status(http.StatusFound).To("/" + a.Slug + "/unlock")
 	default: // gate.NotFound
@@ -136,8 +140,37 @@ func (h *Public) UnlockSubmit(c fiber.Ctx) error {
 	return c.Redirect().To("/" + a.Slug)
 }
 
-// protectedArticle fetches the article by :slug and returns it only if it is a
-// published, protected article (otherwise the unlock page must not exist).
+// renderArticle serves an allowed article. Markdown is rendered to HTML with a
+// TOC; html_upload reads the stored file and either serves it raw (raw_mode)
+// or injects it into the layout.
+func (h *Public) renderArticle(c fiber.Ctx, a model.Article) error {
+	if a.Type != model.ArticleTypeHTMLUpload {
+		html, toc := render.RenderWithTOC(a.Body)
+		return renderPage(c, a.Title, publicviews.Article(a, html, toc))
+	}
+
+	data, err := readUploadFile(h.contentDir, a.Slug, a.Body)
+	if err != nil {
+		// Missing file for an existing article is a server error, not 404.
+		return err
+	}
+	if a.RawMode {
+		// Serve the whole document as-is, no theme.
+		return c.Type("html").Send(data)
+	}
+	// Inject the uploaded HTML into the layout (no TOC for pre-built pages).
+	return renderPage(c, a.Title, publicviews.Article(a, string(data), nil))
+}
+
+// readUploadFile reads <contentDir>/<slug>/<name> safely, refusing to escape
+// the slug directory.
+func readUploadFile(contentDir, slug, name string) ([]byte, error) {
+	path := filepath.Join(contentDir, slug, name)
+	if !within(filepath.Join(contentDir, slug), path) {
+		return nil, errors.New("upload file path escapes slug directory")
+	}
+	return os.ReadFile(path)
+}
 func (h *Public) protectedArticle(c fiber.Ctx) (model.Article, bool) {
 	a, err := h.repo.GetArticleBySlug(c.Context(), c.Params("slug"))
 	if err != nil || a.Status != model.StatusPublished || a.Visibility != model.VisibilityProtected {

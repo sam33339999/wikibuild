@@ -6,6 +6,9 @@
 /wikibuild.exe
 cover.out
 
+# Runtime upload content
+/content/
+
 # Editor / OS
 .DS_Store
 *.swp

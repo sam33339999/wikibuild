@@ -1,7 +1,10 @@
 package server_test
 
 import (
+	"archive/zip"
+	"bytes"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -45,6 +48,7 @@ func buildApp(t *testing.T) *fiber.App {
 		Limiter:         auth.NewLoginLimiter(fc, auth.DefaultLimiterConfig()),
 		Clock:           fc,
 		SiteDefaultPass: "sitedefault",
+		ContentDir:      t.TempDir(),
 	})
 	return app
 }
@@ -62,6 +66,10 @@ func csrfTokenAndCookie(t *testing.T, app *fiber.App) (string, []*http.Cookie) {
 	return string(m[1]), resp.Cookies()
 }
 
+// do issues a request. For urlencoded form bodies it sets the Content-Type.
+// Multipart uploads must build the *http.Request manually with the proper
+// multipart Content-Type (this helper would mislabel them) — see
+// TestServer_UploadZip_ServesRawAndInjected.
 func do(app *fiber.App, method, path string, body io.Reader, cookies []*http.Cookie) (*http.Response, error) {
 	req := httptest.NewRequest(method, path, body)
 	if body != nil {
@@ -258,6 +266,89 @@ func TestServer_SettingsPage_UpdatesDefaultPassword(t *testing.T) {
 		strings.NewReader(postForm.Encode()), unlockForm.Cookies())
 	require.NoError(t, err)
 	require.Equal(t, http.StatusSeeOther, submit.StatusCode, "new site default must unlock")
+}
+
+// makeZip builds an in-memory zip from name→content entries.
+func makeZip(t *testing.T, files map[string]string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
+	for name, content := range files {
+		f, err := w.Create(name)
+		require.NoError(t, err)
+		_, err = f.Write([]byte(content))
+		require.NoError(t, err)
+	}
+	require.NoError(t, w.Close())
+	return buf.Bytes()
+}
+
+// cookiesByName returns only the cookies whose Name matches.
+func cookiesByName(cookies []*http.Cookie, names ...string) []*http.Cookie {
+	want := make(map[string]struct{}, len(names))
+	for _, n := range names {
+		want[n] = struct{}{}
+	}
+	out := make([]*http.Cookie, 0, len(cookies))
+	for _, c := range cookies {
+		if _, ok := want[c.Name]; ok {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+func TestServer_UploadZip_ServesRawAndInjected(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+
+	// Send only the session cookie (not any stale csrf_ from login) so the
+	// upload form GET issues a single fresh csrf token+cookie (mirrors a real
+	// browser, which keeps one csrf_ cookie).
+	sessionOnly := cookiesByName(cookies, "wikibuild_admin")
+	formResp, err := do(app, http.MethodGet, "/admin/upload", nil, sessionOnly)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, formResp.StatusCode)
+	fb, _ := io.ReadAll(formResp.Body)
+	m := regexp.MustCompile(`name="_csrf" value="([^"]+)"`).FindSubmatch(fb)
+	require.Len(t, m, 2)
+	postCookies := append([]*http.Cookie{}, sessionOnly...)
+	postCookies = append(postCookies, formResp.Cookies()...)
+
+	// Build a multipart upload with a zip containing index.html + an asset.
+	zipBytes := makeZip(t, map[string]string{
+		"index.html": "<!doctype html><p>uploaded page</p>",
+		"css/x.css":  "body{}",
+	})
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	_ = mw.WriteField("slug", "site")
+	_ = mw.WriteField("title", "Site")
+	_ = mw.WriteField("status", "published")
+	_ = mw.WriteField("visibility", "public")
+	_ = mw.WriteField("raw_mode", "on")
+	_ = mw.WriteField("_csrf", string(m[1]))
+	fw, _ := mw.CreateFormFile("file", "site.zip")
+	_, _ = fw.Write(zipBytes)
+	require.NoError(t, mw.Close())
+	// Build the request manually so the multipart Content-Type is preserved
+	// (the do() helper forces urlencoded, which would mislabel the body).
+	req := httptest.NewRequest(http.MethodPost, "/admin/upload", &body)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	for _, ck := range postCookies {
+		req.AddCookie(ck)
+	}
+	upload, err := app.Test(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, upload.StatusCode)
+	require.Equal(t, "/admin", upload.Header.Get("Location"))
+
+	// Public article page serves the raw file (raw_mode=on).
+	view, err := do(app, http.MethodGet, "/site", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, view.StatusCode)
+	viewBody, _ := io.ReadAll(view.Body)
+	require.Contains(t, string(viewBody), "uploaded page")
 }
 
 func TestServer_PublicPages_RenderArticle(t *testing.T) {

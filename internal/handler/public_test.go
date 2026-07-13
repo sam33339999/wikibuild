@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -20,18 +22,19 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fake) {
+func publicApp(t *testing.T) (*fiber.App, *inmem.Store, *auth.Signer, *clock.Fake, string) {
 	t.Helper()
 	repo := inmem.New()
 	fc := clock.NewFake(time.Unix(1_700_000_000, 0))
 	signer := auth.NewSigner("supersecretkey1234", fc)
-	h := handler.NewPublic(repo, signer, fakeHasher{}, "sitedefault")
+	dir := t.TempDir()
+	h := handler.NewPublic(repo, signer, fakeHasher{}, "sitedefault", dir)
 	app := fiber.New()
 	app.Get("/", h.Index)
 	app.Get("/:slug", h.Article)
 	app.Get("/:slug/unlock", h.UnlockForm)
 	app.Post("/:slug/unlock", h.UnlockSubmit)
-	return app, repo, signer, fc
+	return app, repo, signer, fc, dir
 }
 
 func seedArticle(t *testing.T, repo *inmem.Store, slug, title, body string, status model.Status, vis model.Visibility) model.Article {
@@ -50,7 +53,7 @@ func seedArticle(t *testing.T, repo *inmem.Store, slug, title, body string, stat
 }
 
 func TestPublic_Index_ShowsOnlyPublishedPublic(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "pub", "Published", "x", model.StatusPublished, model.VisibilityPublic)
 	seedArticle(t, repo, "draft", "Draft", "x", model.StatusDraft, model.VisibilityPublic)
 	seedArticle(t, repo, "priv", "Private", "x", model.StatusPublished, model.VisibilityPrivate)
@@ -66,7 +69,7 @@ func TestPublic_Index_ShowsOnlyPublishedPublic(t *testing.T) {
 }
 
 func TestPublic_Index_Pagination(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	// Zero-padded titles avoid substring collisions ("Post 01" vs "Post 11").
 	for i := 0; i < 12; i++ {
 		seedArticle(t, repo, "p"+itoa(i), fmt.Sprintf("Post %02d", i), "x",
@@ -96,7 +99,7 @@ func TestPublic_Index_Pagination(t *testing.T) {
 }
 
 func TestPublic_Article_RendersMarkdown(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "hello", "Hello", "# Hello\n\nA **bold** word.", model.StatusPublished, model.VisibilityPublic)
 
 	req := httptest.NewRequest(http.MethodGet, "/hello", nil)
@@ -109,7 +112,7 @@ func TestPublic_Article_RendersMarkdown(t *testing.T) {
 }
 
 func TestPublic_Article_TOCRendered(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "toc", "TOC", "# Intro\n\n## Details\n\ntext", model.StatusPublished, model.VisibilityPublic)
 
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/toc", nil))
@@ -120,20 +123,20 @@ func TestPublic_Article_TOCRendered(t *testing.T) {
 }
 
 func TestPublic_Article_NotFound(t *testing.T) {
-	app, _, _, _ := publicApp(t)
+	app, _, _, _, _ := publicApp(t)
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/nope", nil))
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestPublic_Article_DraftIs404(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "draft", "Draft", "x", model.StatusDraft, model.VisibilityPublic)
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/draft", nil))
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestPublic_Article_NonPublicVisibilityIs404(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "priv", "Private", "x", model.StatusPublished, model.VisibilityPrivate)
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/priv", nil))
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
@@ -155,7 +158,7 @@ func seedProtected(t *testing.T, repo *inmem.Store, slug, title, password string
 }
 
 func TestPublic_Protected_RedirectsToUnlock(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedProtected(t, repo, "secret", "Secret", "")
 
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/secret", nil))
@@ -164,7 +167,7 @@ func TestPublic_Protected_RedirectsToUnlock(t *testing.T) {
 }
 
 func TestPublic_UnlockForm_OK(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedProtected(t, repo, "secret", "Secret", "")
 
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/secret/unlock", nil))
@@ -175,7 +178,7 @@ func TestPublic_UnlockForm_OK(t *testing.T) {
 }
 
 func TestPublic_UnlockForm_NonProtectedIs404(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedArticle(t, repo, "pub", "Public", "x", model.StatusPublished, model.VisibilityPublic)
 
 	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/pub/unlock", nil))
@@ -183,7 +186,7 @@ func TestPublic_UnlockForm_NonProtectedIs404(t *testing.T) {
 }
 
 func TestPublic_UnlockSubmit_SiteDefault_CorrectSetsCookie(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedProtected(t, repo, "secret", "Secret", "") // no article password → site default "sitedefault"
 
 	resp := postUnlock(app, "/secret/unlock", "sitedefault")
@@ -193,7 +196,7 @@ func TestPublic_UnlockSubmit_SiteDefault_CorrectSetsCookie(t *testing.T) {
 }
 
 func TestPublic_UnlockSubmit_ArticlePassword_Correct(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	// fakeHasher hashes to "H:"+plain, so the stored hash is "H:mypass".
 	seedProtected(t, repo, "secret", "Secret", "H:mypass")
 
@@ -203,7 +206,7 @@ func TestPublic_UnlockSubmit_ArticlePassword_Correct(t *testing.T) {
 }
 
 func TestPublic_UnlockSubmit_WrongPassword_RerendersWithError(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	seedProtected(t, repo, "secret", "Secret", "")
 
 	resp := postUnlock(app, "/secret/unlock", "wrong")
@@ -213,7 +216,7 @@ func TestPublic_UnlockSubmit_WrongPassword_RerendersWithError(t *testing.T) {
 }
 
 func TestPublic_AfterUnlock_ArticleRenders(t *testing.T) {
-	app, repo, _, _ := publicApp(t)
+	app, repo, _, _, _ := publicApp(t)
 	a := seedProtected(t, repo, "secret", "Secret", "")
 
 	// Unlock with the site default password, collecting the cookie.
@@ -236,7 +239,7 @@ func TestPublic_AfterUnlock_ArticleRenders(t *testing.T) {
 }
 
 func TestPublic_Protected_AdminBypassesUnlock(t *testing.T) {
-	app, repo, signer, _ := publicApp(t)
+	app, repo, signer, _, _ := publicApp(t)
 	seedProtected(t, repo, "secret", "Secret", "")
 
 	tok, err := signer.Sign("admin", time.Hour)
@@ -255,6 +258,48 @@ func postUnlock(app *fiber.App, path, password string) *http.Response {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, _ := app.Test(req)
 	return resp
+}
+
+// --- html_upload serving (M3.2) ---
+
+func seedHTMLUpload(t *testing.T, repo *inmem.Store, dir, slug, title, html string, rawMode bool) model.Article {
+	t.Helper()
+	pub := time.Unix(1_700_000_000, 0)
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, slug), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, slug, "index.html"), []byte(html), 0o644))
+	a := model.Article{
+		Slug: slug, Title: title, Type: model.ArticleTypeHTMLUpload, Body: "index.html",
+		Status: model.StatusPublished, Visibility: model.VisibilityPublic,
+		RawMode: rawMode, PublishedAt: &pub,
+	}
+	created, err := repo.CreateArticle(context.Background(), a)
+	require.NoError(t, err)
+	return created
+}
+
+func TestPublic_HtmlUpload_RawMode_ServedAsIs(t *testing.T) {
+	app, repo, _, _, dir := publicApp(t)
+	fullDoc := "<!doctype html><html><head><title>Raw</title></head><body><p>raw content</p></body></html>"
+	seedHTMLUpload(t, repo, dir, "raw", "Raw", fullDoc, true)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/raw", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	// Raw mode serves the file verbatim — no layout chrome added.
+	require.Equal(t, fullDoc, string(body))
+}
+
+func TestPublic_HtmlUpload_InjectedIntoLayout(t *testing.T) {
+	app, repo, _, _, dir := publicApp(t)
+	content := "<p>injected content</p>"
+	seedHTMLUpload(t, repo, dir, "inj", "Injected", content, false)
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/inj", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	// Injected: wrapped in the layout (has the article title) AND the content.
+	require.Contains(t, string(body), "Injected")
+	require.Contains(t, string(body), "injected content")
 }
 
 func itoa(i int) string {

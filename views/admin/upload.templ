@@ -1,0 +1,32 @@
+package admin
+
+// Upload renders the HTML upload form. The file field accepts a .zip
+// (containing index.html + assets) or a single .html file.
+templ Upload(csrfToken string) {
+	<h1>上傳 HTML</h1>
+	<form method="post" action="/admin/upload" enctype="multipart/form-data">
+		<input type="hidden" name="_csrf" value={ csrfToken }/>
+		<p><label>slug<br/><input name="slug" required/></label></p>
+		<p><label>標題<br/><input name="title" required/></label></p>
+		<p><label>檔案（.zip 含 index.html 與資產，或單一 .html）<br/><input name="file" type="file" required/></label></p>
+		<p>
+			<label>狀態
+				<select name="status">
+					<option value="draft">draft</option>
+					<option value="published">published</option>
+				</select>
+			</label>
+		</p>
+		<p>
+			<label>可見性
+				<select name="visibility">
+					<option value="public">public</option>
+					<option value="protected">protected</option>
+					<option value="private">private</option>
+				</select>
+			</label>
+		</p>
+		<p><label><input name="raw_mode" type="checkbox"/> raw_mode（原檔直送，不套佈景）</label></p>
+		<p><button type="submit">上傳</button></p>
+	</form>
+}

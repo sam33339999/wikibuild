@@ -72,6 +72,7 @@ func run() error {
 		Limiter:         auth.NewLoginLimiter(clk, auth.DefaultLimiterConfig()),
 		Clock:           clk,
 		SiteDefaultPass: cfg.DefaultProtectedPass,
+		ContentDir:      cfg.ContentDir,
 	})
 
 	// Graceful shutdown on SIGINT / SIGTERM.

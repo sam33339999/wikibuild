@@ -24,6 +24,7 @@ type Deps struct {
 	Limiter         *auth.LoginLimiter
 	Clock           clock.Clock
 	SiteDefaultPass string // fallback password for protected articles without their own
+	ContentDir      string // root for html_upload article files
 }
 
 // New builds the configured Fiber app. The caller starts it with app.Listen().
@@ -49,6 +50,7 @@ func New(d Deps) *fiber.App {
 	})
 	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher)
 	settings := handler.NewSettings(d.Store)
+	uploads := handler.NewUpload(d.Store, d.ContentDir)
 
 	// Public auth routes (no auth required).
 	app.Get("/admin/login", adminAuth.LoginPage)
@@ -66,13 +68,15 @@ func New(d Deps) *fiber.App {
 	admin.Post("/new", articleAdmin.Create)
 	admin.Get("/settings", settings.Form)
 	admin.Post("/settings", settings.Save)
+	admin.Get("/upload", uploads.Form)
+	admin.Post("/upload", uploads.Submit)
 	admin.Get("/:id/edit", articleAdmin.EditForm)
 	admin.Post("/:id", articleAdmin.Update)
 	admin.Post("/:id/delete", articleAdmin.Delete)
 
 	// Public reader-facing pages (registered last; static /admin routes above
 	// take priority over the /:slug parameter route).
-	pub := handler.NewPublic(d.Store, d.Signer, d.Hasher, d.SiteDefaultPass)
+	pub := handler.NewPublic(d.Store, d.Signer, d.Hasher, d.SiteDefaultPass, d.ContentDir)
 	app.Get("/", pub.Index)
 	app.Get("/:slug", pub.Article)
 	app.Get("/:slug/unlock", pub.UnlockForm)
