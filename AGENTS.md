@@ -20,7 +20,7 @@ Implemented (high level):
 - `static/` — site.css (Claude-adjacent reading UI), toc-sidebar.js, editor, theme
 - `cmd/wikibuild`, `cmd/resetadmin`
 
-**S1–S2 shipped (v1.1 partial):** editable SEO fields + admin **AI 產生 SEO** (`internal/llm`, OpenAI-compatible HTTP; env `WIKIBUILD_LLM_*`). Next: S3 writing search, S4 MCP.
+**S1–S2–S3a shipped (v1.1 partial):** editable SEO + AI SEO + editor site search/wikilink insert. Next: S3b (optional LLM related), **S4 MCP**.
 
 ## Toolchain (must be on PATH)
 

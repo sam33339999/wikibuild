@@ -72,5 +72,5 @@ make run               # 需本機有 sqlc/templ/migrate 時再 make generate
 
 | | |
 |--|--|
-| **現在** | v1.0 + **v1.1 S1–S2**：可編 SEO 欄位 + 後台「AI 產生 SEO」（OpenAI 兼容） |
-| **接下來** | [v1.1](docs/specs/v1.1-ai-seo-mcp.md) S3–S4：寫作搜尋 → MCP |
+| **現在** | v1.0 + **v1.1 S1–S3a**：SEO 欄位、AI 產生 SEO、編輯器站內搜尋插 wikilink |
+| **接下來** | [v1.1](docs/specs/v1.1-ai-seo-mcp.md) S3b（可選）→ **S4 MCP** |

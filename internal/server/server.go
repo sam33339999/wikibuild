@@ -137,9 +137,10 @@ func New(d Deps) *fiber.App {
 	admin.Get("/redirects", redirects.List)
 	admin.Post("/redirects", redirects.Create)
 	admin.Post("/redirects/delete", redirects.Delete)
-	// AI SEO (static paths before /:id).
+	// AI SEO + editor search API (static paths before /:id).
 	admin.Post("/ai/seo", aiseo.Generate)
 	admin.Post("/:id/ai/seo", aiseo.GenerateForArticle)
+	admin.Get("/api/articles/search", articleAdmin.SearchJSON)
 	admin.Get("/:id/edit", articleAdmin.EditForm)
 	admin.Post("/:id", articleAdmin.Update)
 	admin.Post("/:id/delete", articleAdmin.Delete)

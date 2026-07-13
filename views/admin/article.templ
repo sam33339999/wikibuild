@@ -103,15 +103,27 @@ templ ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled 
 		<p>
 			<label>標題<br/><input name="title" value={ a.Title } required/></label>
 		</p>
-		<div class="editor-field">
-			<label for="body">內文（即時渲染 Markdown）</label>
-			<div class="editor-toolbar">
-				<button type="button" id="editor-toggle-source" data-mode="ir" aria-pressed="false">模式：即時渲染</button>
-				<span class="meta">可貼上／拖拉圖片 · 工具列可切編輯模式</span>
+		<div class="editor-layout">
+			<div class="editor-field">
+				<label for="body">內文（即時渲染 Markdown）</label>
+				<div class="editor-toolbar">
+					<button type="button" id="editor-toggle-source" data-mode="ir" aria-pressed="false">模式：即時渲染</button>
+					<span class="meta">可貼上／拖拉圖片 · 工具列可切編輯模式</span>
+				</div>
+				<div id="md-editor" class="md-editor-host" data-editor="vditor"></div>
+				<textarea id="body" name="body" rows="16" cols="80">{ a.Body }</textarea>
+				<span id="media-status"></span>
 			</div>
-			<div id="md-editor" class="md-editor-host" data-editor="vditor"></div>
-			<textarea id="body" name="body" rows="16" cols="80">{ a.Body }</textarea>
-			<span id="media-status"></span>
+			<aside class="editor-search" id="editor-search"
+				data-endpoint="/admin/api/articles/search"
+				data-exclude-id={ strconv.FormatInt(a.ID, 10) }>
+				<h2 class="editor-search-title">站內文章</h2>
+				<p class="meta">搜尋標題／內文，點選插入 <code>[[slug]]</code> wikilink。</p>
+				<label class="sr-only" for="editor-search-q">搜尋文章</label>
+				<input type="search" id="editor-search-q" placeholder="關鍵字…" autocomplete="off"/>
+				<ul id="editor-search-results" class="editor-search-results" aria-live="polite"></ul>
+				<p id="editor-search-status" class="meta" aria-live="polite"></p>
+			</aside>
 		</div>
 		<p>
 			<label>標籤（逗號分隔）<br/><input name="tags" value={ strings.Join(a.Tags, ", ") }/></label>
@@ -176,6 +188,7 @@ templ ArticleForm(action string, a *model.Article, csrfToken string, llmEnabled 
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.css"/>
 	<script src="https://cdn.jsdelivr.net/npm/vditor@3.10.9/dist/index.min.js"></script>
 	<script src="/static/js/editor.js" defer></script>
+	<script src="/static/js/editor-search.js" defer></script>
 	if llmEnabled {
 		<script src="/static/js/ai-seo.js" defer></script>
 	}

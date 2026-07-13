@@ -61,6 +61,53 @@ func (h *ArticleAdmin) List(c fiber.Ctx) error {
 	return renderPage(c, "文章列表", adminviews.ArticleList(items, q, csrf.TokenFromContext(c)))
 }
 
+// editorSearchLimit caps JSON results for the writing-time search panel (S3a).
+const editorSearchLimit = 20
+
+// SearchJSON serves GET /admin/api/articles/search?q=&exclude_id= for the
+// markdown editor link panel. Returns admin-visible articles (any status /
+// visibility). Does not leak via public routes — caller must be behind RequireAuth.
+func (h *ArticleAdmin) SearchJSON(c fiber.Ctx) error {
+	q := strings.TrimSpace(c.Query("q"))
+	if q == "" {
+		return c.JSON([]any{})
+	}
+	excludeID, _ := strconv.ParseInt(c.Query("exclude_id"), 10, 64)
+
+	items, _, err := h.repo.ListArticles(c.Context(), store.ListQuery{
+		Search: q,
+		Limit:  editorSearchLimit + 5, // fetch a few extra if excluding self
+	})
+	if err != nil {
+		return err
+	}
+
+	type hit struct {
+		ID         int64  `json:"id"`
+		Slug       string `json:"slug"`
+		Title      string `json:"title"`
+		Status     string `json:"status"`
+		Visibility string `json:"visibility"`
+	}
+	out := make([]hit, 0, editorSearchLimit)
+	for _, a := range items {
+		if excludeID > 0 && a.ID == excludeID {
+			continue
+		}
+		out = append(out, hit{
+			ID:         a.ID,
+			Slug:       a.Slug,
+			Title:      a.Title,
+			Status:     string(a.Status),
+			Visibility: string(a.Visibility),
+		})
+		if len(out) >= editorSearchLimit {
+			break
+		}
+	}
+	return c.JSON(out)
+}
+
 // NewForm renders a blank article form.
 func (h *ArticleAdmin) NewForm(c fiber.Ctx) error {
 	return renderPage(c, "新增文章", adminviews.ArticleForm("/admin/new", &model.Article{

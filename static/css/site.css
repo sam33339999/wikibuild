@@ -403,6 +403,73 @@ body:has(.admin-page) .site-footer {
 .admin-page .md-editor-host {
   max-width: 100%;
 }
+.admin-page .editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  gap: 1rem 1.25rem;
+  align-items: start;
+  margin-bottom: 1rem;
+}
+@media (max-width: 900px) {
+  .admin-page .editor-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-page .editor-search {
+  position: sticky;
+  top: 0.75rem;
+  padding: 0.85rem 0.95rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface, var(--bg)) 92%, var(--border));
+  max-height: min(70vh, 32rem);
+  overflow: auto;
+}
+.admin-page .editor-search-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.admin-page .editor-search input[type="search"] {
+  width: 100%;
+  margin: 0.4rem 0 0.55rem;
+  font: inherit;
+}
+.admin-page .editor-search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.admin-page .editor-search-results li {
+  margin: 0 0 0.35rem;
+}
+.admin-page .editor-search-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+}
+.admin-page .editor-search-hit:hover {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--link) 8%, transparent);
+}
+.admin-page .editor-search-hit-title {
+  font-weight: 500;
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+.admin-page .editor-search-hit-meta {
+  font-size: 0.78rem;
+}
 .admin-page .seo-share-fields {
   margin: 1.5rem 0 1rem;
   padding: 1rem 1.1rem 0.25rem;
