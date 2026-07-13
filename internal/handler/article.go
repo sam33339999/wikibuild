@@ -138,6 +138,7 @@ func articleFromForm(c fiber.Ctx) model.Article {
 		Tags:       parseTags(c.FormValue("tags")),
 		Status:     model.Status(strings.Clone(c.FormValue("status"))),
 		Visibility: model.Visibility(strings.Clone(c.FormValue("visibility"))),
+		Pinned:     c.FormValue("pinned") == "on",
 	}
 }
 

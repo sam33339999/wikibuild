@@ -1,9 +1,9 @@
 -- name: CreateArticle :one
 INSERT INTO articles (
-    slug, title, type, status, visibility, password, raw_mode,
+    slug, title, type, status, visibility, password, raw_mode, pinned,
     body, tags, created_at, updated_at, published_at
 ) VALUES (
-    @slug, @title, @type, @status, @visibility, @password, @raw_mode,
+    @slug, @title, @type, @status, @visibility, @password, @raw_mode, @pinned,
     @body, @tags,
     COALESCE(sqlc.narg('created_at'), now()),
     COALESCE(sqlc.narg('updated_at'), now()),
@@ -26,6 +26,7 @@ UPDATE articles SET
     visibility   = @visibility,
     password     = @password,
     raw_mode     = @raw_mode,
+    pinned       = @pinned,
     body         = @body,
     tags         = @tags,
     updated_at   = COALESCE(sqlc.narg('updated_at'), now()),
@@ -44,7 +45,7 @@ WHERE (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status')::text)
   AND (sqlc.narg('visibility')::text IS NULL OR visibility = sqlc.narg('visibility')::text)
   AND (sqlc.narg('tag')::text IS NULL OR sqlc.narg('tag')::text = ANY(tags))
   AND (@search = '' OR title ILIKE '%' || @search || '%' OR body ILIKE '%' || @search || '%')
-ORDER BY id DESC
+ORDER BY pinned DESC, id DESC
 LIMIT NULLIF(@max_rows, 0) OFFSET @skip;
 
 -- name: CountArticles :one

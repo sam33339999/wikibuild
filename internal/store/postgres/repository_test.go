@@ -227,6 +227,38 @@ func TestRepository_SatisfiesInterface(t *testing.T) {
 	var _ store.Repository = (*Repository)(nil)
 }
 
+func TestUpdateArticle_PinnedRoundTrip(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+	a, err := repo.CreateArticle(ctx, sampleArticle("pin"))
+	require.NoError(t, err)
+	require.False(t, a.Pinned, "pinned defaults to false")
+
+	a.Pinned = true
+	updated, err := repo.UpdateArticle(ctx, a)
+	require.NoError(t, err)
+	require.True(t, updated.Pinned)
+
+	got, err := repo.GetArticle(ctx, a.ID)
+	require.NoError(t, err)
+	require.True(t, got.Pinned)
+}
+
+func TestListArticles_PinnedFirst(t *testing.T) {
+	repo := NewTestRepo(t)
+	ctx := context.Background()
+	_, _ = repo.CreateArticle(ctx, sampleArticleWith("a", model.StatusPublished, model.VisibilityPublic, "x"))
+	p := sampleArticleWith("b", model.StatusPublished, model.VisibilityPublic, "y")
+	p.Pinned = true
+	_, _ = repo.CreateArticle(ctx, p)
+	_, _ = repo.CreateArticle(ctx, sampleArticleWith("c", model.StatusPublished, model.VisibilityPublic, "z"))
+
+	items, _, err := repo.ListArticles(ctx, store.ListQuery{})
+	require.NoError(t, err)
+	require.True(t, items[0].Pinned, "pinned article sorts first")
+	require.Equal(t, "b", items[0].Slug)
+}
+
 func TestSettings_GetSetRoundTrip(t *testing.T) {
 	repo := NewTestRepo(t)
 	ctx := context.Background()

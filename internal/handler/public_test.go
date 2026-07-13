@@ -328,6 +328,26 @@ func TestPublic_BacklinksListed(t *testing.T) {
 	require.Contains(t, string(body), `<a href="/alpha">Alpha Post</a>`)
 }
 
+func TestPublic_Index_PinnedFirst(t *testing.T) {
+	app, repo, _, _, _ := publicApp(t)
+	seedArticle(t, repo, "normal", "Normal Post", "x", model.StatusPublished, model.VisibilityPublic)
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "pinned", Title: "Pinned Post", Body: "y",
+		Type: model.ArticleTypeMarkdown, Status: model.StatusPublished,
+		Visibility: model.VisibilityPublic, Pinned: true,
+	})
+
+	resp, _ := app.Test(httptest.NewRequest(http.MethodGet, "/", nil))
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	// Pinned article must appear before the normal one in the listing.
+	idxPinned := strings.Index(string(body), "Pinned Post")
+	idxNormal := strings.Index(string(body), "Normal Post")
+	require.GreaterOrEqual(t, idxPinned, 0)
+	require.GreaterOrEqual(t, idxNormal, 0)
+	require.Less(t, idxPinned, idxNormal, "pinned article must come first")
+}
+
 func TestPublic_Backlinks_ExcludeSelfAndNonPublic(t *testing.T) {
 	app, repo, _, _, _ := publicApp(t)
 	// beta self-links and a private article links to beta.

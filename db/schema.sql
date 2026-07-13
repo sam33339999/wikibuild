@@ -17,6 +17,7 @@ CREATE TABLE articles (
     visibility   TEXT      NOT NULL DEFAULT 'public' CHECK (visibility IN ('public', 'protected', 'private')),
     password     TEXT      NOT NULL DEFAULT '',
     raw_mode     BOOLEAN   NOT NULL DEFAULT false,
+    pinned       BOOLEAN   NOT NULL DEFAULT false,
     body         TEXT      NOT NULL DEFAULT '',
     tags         TEXT[]    NOT NULL DEFAULT '{}',
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),

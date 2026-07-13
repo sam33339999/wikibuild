@@ -40,16 +40,16 @@ func (q *Queries) CountArticles(ctx context.Context, arg CountArticlesParams) (i
 
 const createArticle = `-- name: CreateArticle :one
 INSERT INTO articles (
-    slug, title, type, status, visibility, password, raw_mode,
+    slug, title, type, status, visibility, password, raw_mode, pinned,
     body, tags, created_at, updated_at, published_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7,
-    $8, $9,
-    COALESCE($10, now()),
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10,
     COALESCE($11, now()),
-    $12
+    COALESCE($12, now()),
+    $13
 )
-RETURNING id, slug, title, type, status, visibility, password, raw_mode, body, tags, created_at, updated_at, published_at
+RETURNING id, slug, title, type, status, visibility, password, raw_mode, pinned, body, tags, created_at, updated_at, published_at
 `
 
 type CreateArticleParams struct {
@@ -60,6 +60,7 @@ type CreateArticleParams struct {
 	Visibility  string
 	Password    string
 	RawMode     bool
+	Pinned      bool
 	Body        string
 	Tags        []string
 	CreatedAt   interface{}
@@ -76,6 +77,7 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		arg.Visibility,
 		arg.Password,
 		arg.RawMode,
+		arg.Pinned,
 		arg.Body,
 		arg.Tags,
 		arg.CreatedAt,
@@ -92,6 +94,7 @@ func (q *Queries) CreateArticle(ctx context.Context, arg CreateArticleParams) (A
 		&i.Visibility,
 		&i.Password,
 		&i.RawMode,
+		&i.Pinned,
 		&i.Body,
 		&i.Tags,
 		&i.CreatedAt,
@@ -111,7 +114,7 @@ func (q *Queries) DeleteArticle(ctx context.Context, id int64) error {
 }
 
 const getArticle = `-- name: GetArticle :one
-SELECT id, slug, title, type, status, visibility, password, raw_mode, body, tags, created_at, updated_at, published_at FROM articles WHERE id = $1
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, body, tags, created_at, updated_at, published_at FROM articles WHERE id = $1
 `
 
 func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
@@ -126,6 +129,7 @@ func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
 		&i.Visibility,
 		&i.Password,
 		&i.RawMode,
+		&i.Pinned,
 		&i.Body,
 		&i.Tags,
 		&i.CreatedAt,
@@ -136,7 +140,7 @@ func (q *Queries) GetArticle(ctx context.Context, id int64) (Article, error) {
 }
 
 const getArticleBySlug = `-- name: GetArticleBySlug :one
-SELECT id, slug, title, type, status, visibility, password, raw_mode, body, tags, created_at, updated_at, published_at FROM articles WHERE slug = $1
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, body, tags, created_at, updated_at, published_at FROM articles WHERE slug = $1
 `
 
 func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, error) {
@@ -151,6 +155,7 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, e
 		&i.Visibility,
 		&i.Password,
 		&i.RawMode,
+		&i.Pinned,
 		&i.Body,
 		&i.Tags,
 		&i.CreatedAt,
@@ -161,12 +166,12 @@ func (q *Queries) GetArticleBySlug(ctx context.Context, slug string) (Article, e
 }
 
 const listArticles = `-- name: ListArticles :many
-SELECT id, slug, title, type, status, visibility, password, raw_mode, body, tags, created_at, updated_at, published_at FROM articles
+SELECT id, slug, title, type, status, visibility, password, raw_mode, pinned, body, tags, created_at, updated_at, published_at FROM articles
 WHERE ($1::text IS NULL OR status = $1::text)
   AND ($2::text IS NULL OR visibility = $2::text)
   AND ($3::text IS NULL OR $3::text = ANY(tags))
   AND ($4 = '' OR title ILIKE '%' || $4 || '%' OR body ILIKE '%' || $4 || '%')
-ORDER BY id DESC
+ORDER BY pinned DESC, id DESC
 LIMIT NULLIF($6, 0) OFFSET $5
 `
 
@@ -206,6 +211,7 @@ func (q *Queries) ListArticles(ctx context.Context, arg ListArticlesParams) ([]A
 			&i.Visibility,
 			&i.Password,
 			&i.RawMode,
+			&i.Pinned,
 			&i.Body,
 			&i.Tags,
 			&i.CreatedAt,
@@ -231,12 +237,13 @@ UPDATE articles SET
     visibility   = $5,
     password     = $6,
     raw_mode     = $7,
-    body         = $8,
-    tags         = $9,
-    updated_at   = COALESCE($10, now()),
-    published_at = $11
-WHERE id = $12
-RETURNING id, slug, title, type, status, visibility, password, raw_mode, body, tags, created_at, updated_at, published_at
+    pinned       = $8,
+    body         = $9,
+    tags         = $10,
+    updated_at   = COALESCE($11, now()),
+    published_at = $12
+WHERE id = $13
+RETURNING id, slug, title, type, status, visibility, password, raw_mode, pinned, body, tags, created_at, updated_at, published_at
 `
 
 type UpdateArticleParams struct {
@@ -247,6 +254,7 @@ type UpdateArticleParams struct {
 	Visibility  string
 	Password    string
 	RawMode     bool
+	Pinned      bool
 	Body        string
 	Tags        []string
 	UpdatedAt   pgtype.Timestamptz
@@ -263,6 +271,7 @@ func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (A
 		arg.Visibility,
 		arg.Password,
 		arg.RawMode,
+		arg.Pinned,
 		arg.Body,
 		arg.Tags,
 		arg.UpdatedAt,
@@ -279,6 +288,7 @@ func (q *Queries) UpdateArticle(ctx context.Context, arg UpdateArticleParams) (A
 		&i.Visibility,
 		&i.Password,
 		&i.RawMode,
+		&i.Pinned,
 		&i.Body,
 		&i.Tags,
 		&i.CreatedAt,

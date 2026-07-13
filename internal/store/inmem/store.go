@@ -117,7 +117,12 @@ func (s *Store) ListArticles(ctx context.Context, q store.ListQuery) ([]model.Ar
 		}
 		out = append(out, a)
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].ID > out[j].ID })
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Pinned != out[j].Pinned {
+			return out[i].Pinned // pinned articles first
+		}
+		return out[i].ID > out[j].ID
+	})
 
 	total := len(out)
 	if q.Offset > 0 {

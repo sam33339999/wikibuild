@@ -33,6 +33,7 @@ type Article struct {
 	Visibility  Visibility
 	Password    string
 	RawMode     bool
+	Pinned      bool
 	Body        string
 	Tags        []string
 	CreatedAt   time.Time

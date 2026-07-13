@@ -17,6 +17,7 @@ type Article struct {
 	Visibility  string
 	Password    string
 	RawMode     bool
+	Pinned      bool
 	Body        string
 	Tags        []string
 	CreatedAt   pgtype.Timestamptz
