@@ -1,0 +1,29 @@
+# Development database for WikiBuilder.
+#
+# Starts only Postgres; the Go app runs on the host and connects over the
+# mapped port. Settings are read from .env (compose loads it automatically):
+#   docker compose up -d
+#
+# Match DATABASE_URL in .env to the POSTGRES_* values below.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wikibuild-pg
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wikibuild}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wikibuild}
+      POSTGRES_DB: ${POSTGRES_DB:-wikibuild}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wikibuild} -d ${POSTGRES_DB:-wikibuild}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:

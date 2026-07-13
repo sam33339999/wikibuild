@@ -1,0 +1,31 @@
+// Package admin holds the templ components for WikiBuilder's admin pages.
+// Files here are compiled by `templ generate` into *_templ.go (never edit
+// those). For M0 only the login page exists; a shared layout is extracted
+// once M1 adds more admin pages.
+package admin
+
+// Login renders the admin login form. csrfToken is embedded in a hidden field
+// so the CSRF middleware can validate the POST.
+templ Login(csrfToken string) {
+	<!doctype html>
+	<html lang="zh-Hant">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>WikiBuilder Admin · 登入</title>
+		</head>
+		<body>
+			<h1>WikiBuilder Admin</h1>
+			<form method="post" action="/admin/login">
+				<input type="hidden" name="_csrf" value={ csrfToken }/>
+				<p>
+					<label>username<br/><input name="username" autocomplete="username" required/></label>
+				</p>
+				<p>
+					<label>password<br/><input name="password" type="password" autocomplete="current-password" required/></label>
+				</p>
+				<button type="submit">登入</button>
+			</form>
+		</body>
+	</html>
+}

@@ -1,2 +1,11 @@
-.DS_Store
+# Local environment / secrets — never commit
+.env
 
+# Build artifacts (anchored to repo root so cmd/wikibuild/ source is tracked)
+/wikibuild
+/wikibuild.exe
+cover.out
+
+# Editor / OS
+.DS_Store
+*.swp

@@ -8,18 +8,25 @@ import (
 )
 
 var (
-	ErrNotFound      = errors.New("article not found")
-	ErrDuplicateSlug = errors.New("duplicate slug")
-	ErrEmptySlug     = errors.New("slug is empty")
+	ErrNotFound          = errors.New("not found")
+	ErrDuplicateSlug     = errors.New("duplicate slug")
+	ErrDuplicateUsername = errors.New("duplicate username")
+	ErrEmptySlug         = errors.New("slug is empty")
+	ErrEmptyUsername     = errors.New("username is empty")
 )
 
 type Repository interface {
+	// Articles
 	CreateArticle(ctx context.Context, a model.Article) (model.Article, error)
 	GetArticle(ctx context.Context, id int64) (model.Article, error)
 	GetArticleBySlug(ctx context.Context, slug string) (model.Article, error)
 	UpdateArticle(ctx context.Context, a model.Article) (model.Article, error)
 	DeleteArticle(ctx context.Context, id int64) error
 	ListArticles(ctx context.Context, q ListQuery) (items []model.Article, total int, err error)
+
+	// Users
+	CreateUser(ctx context.Context, u model.User) (model.User, error)
+	GetUserByUsername(ctx context.Context, username string) (model.User, error)
 }
 
 type ListQuery struct {

@@ -133,7 +133,7 @@ GET  /admin/settings  全站設定（含預設 protected 密碼）
 ### 前置需求
 
 - Go 1.26+
-- PostgreSQL
+- PostgreSQL（開發可用 `docker compose` 一鍵起，見下方）
 - `sqlc` CLI、`templ` CLI、`migrate` CLI（或透過 Makefile / go generate 呼叫）
 
 ### 建置步驟（程式碼生成）
@@ -155,8 +155,10 @@ make migrate-down   # 回退一步
 ### 啟動
 
 ```bash
-cp .env.example .env   # 編輯設定
-make run               # go run ./cmd/wikibuild
+cp .env.example .env   # 編輯設定（DB 連線、admin 帳密、session secret）
+make db-up             # docker compose 起 PostgreSQL（開發用）
+make migrate-up        # 套用 schema
+make run               # go run ./cmd/wikibuild（自動載入 .env）
 ```
 
 ## 設定（環境變數）
@@ -164,12 +166,17 @@ make run               # go run ./cmd/wikibuild
 | 變數 | 說明 | 預設 |
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL 連線字串 | — |
+| `WIKIBUILD_HOST` | 監聽位址（`127.0.0.1` 僅本機；`0.0.0.0` 對外） | `127.0.0.1` |
 | `WIKIBUILD_PORT` | 監聽 port | `8080` |
 | `WIKIBUILD_ADMIN_USER` | 管理者帳號 | — |
 | `WIKIBUILD_ADMIN_PASS` | 管理者初始密碼（首次啟動建帳號用） | — |
 | `WIKIBUILD_SESSION_SECRET` | session HMAC 簽章金鑰 | — |
 | `WIKIBUILD_CONTENT_DIR` | 上傳內容目錄 | `./content/uploads` |
 | `WIKIBUILD_DEFAULT_PROTECTED_PASS` | protected 文章全站預設密碼 | — |
+
+### `.env` 機制
+
+`.env` 為開發單一設定來源：docker compose 讀 `POSTGRES_*`，app 透過 `godotenv` 自動載入（真實環境變數仍優先），Makefile 透過 `-include .env` 讓 `make migrate-up` 取得 `DATABASE_URL`。`.env.example` 為 committed 樣板，`.env` 本身 gitignore。
 
 ## 部署
 
@@ -249,8 +256,8 @@ make cover             # 覆蓋率報告
 
 > 里程碑依上述 MVP 範圍重排，標註涵蓋的分類。
 
-1. **M0 基礎骨架**｜核心+安全
-   config、PostgreSQL schema、migrations、Repository interface + pg 實作、Fiber app、templ 版型、admin 登入（bcrypt + session）、**CSRF 中介層、登入限流**
+1. **M0 基礎骨架**｜核心+安全 ✅ 已完成
+   config、PostgreSQL schema、migrations、Repository interface + pg 實作、Fiber app、templ 版型、admin 登入（bcrypt + session）、**CSRF 中介層、登入限流**、docker compose 開發 DB、`.env` 機制
 2. **M1 文章核心（Markdown）**｜核心
    後台列表／新增／編輯／刪除、Goldmark 渲染、**自動目錄（TOC）**、程式碼高亮、公開頁渲染、列表分頁、slug 唯一、status 草稿／發布
 3. **M2 可見性三態**｜核心

@@ -14,12 +14,18 @@ type Store struct {
 	nextID int64
 	byID   map[int64]model.Article
 	bySlug map[string]int64
+
+	nextUserID  int64
+	usersByID   map[int64]model.User
+	usersByName map[string]int64
 }
 
 func New() *Store {
 	return &Store{
-		byID:   make(map[int64]model.Article),
-		bySlug: make(map[string]int64),
+		byID:        make(map[int64]model.Article),
+		bySlug:      make(map[string]int64),
+		usersByID:   make(map[int64]model.User),
+		usersByName: make(map[string]int64),
 	}
 }
 
@@ -127,4 +133,30 @@ func containsTag(tags []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func (s *Store) CreateUser(ctx context.Context, u model.User) (model.User, error) {
+	if u.Username == "" {
+		return model.User{}, store.ErrEmptyUsername
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, exists := s.usersByName[u.Username]; exists {
+		return model.User{}, store.ErrDuplicateUsername
+	}
+	s.nextUserID++
+	u.ID = s.nextUserID
+	s.usersByID[u.ID] = u
+	s.usersByName[u.Username] = u.ID
+	return u, nil
+}
+
+func (s *Store) GetUserByUsername(ctx context.Context, username string) (model.User, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	id, ok := s.usersByName[username]
+	if !ok {
+		return model.User{}, store.ErrNotFound
+	}
+	return s.usersByID[id], nil
 }
