@@ -13,10 +13,12 @@
   - **Markdown** — 後台編輯，server 渲染（TOC、程式碼高亮、`[[wikilink]]`）。
   - **HTML 上版** — zip／單檔靜態頁或簡報；可整頁原檔直送，或嵌在站台外框（iframe）裡。
 - **誰看得到**：`public` / `protected`（密碼）/ `private`（外人當 404）。
-- **被人找到**：RSS／Atom／JSON Feed、sitemap、robots、基本 SEO meta 與 JSON-LD（多半自動產生）。
+- **被人找到**：RSS／Atom／JSON Feed、sitemap、robots、可編 SEO meta／OG／JSON-LD（可 AI 輔助填）。
 - **長相**：無 npm 建置的主題（深淺色）、品牌設定；閱讀頁可關目錄、懸浮大綱。
+- **寫作輔助**：後台站內搜尋插 `[[wikilink]]`；可選 LLM 產生摘要／meta。
+- **代理整合**：[MCP stdio](docs/integrations-mcp.md) 讀寫文章（`wikibuild mcp`）。
 
-**v1.0 已可用。** 下一波（可編 SEO 欄位、LLM 摘要、寫作搜尋、MCP）見 [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md)。
+**v1.0 + v1.1 已可用。** 規格紀錄：[`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md)。
 
 ---
 
@@ -72,5 +74,5 @@ make run               # 需本機有 sqlc/templ/migrate 時再 make generate
 
 | | |
 |--|--|
-| **現在** | v1.0 + **v1.1**：SEO 欄位、AI 產生 SEO、編輯器站內搜尋、[MCP](docs/integrations-mcp.md) |
-| **可選** | [v1.1 S3b](docs/specs/v1.1-ai-seo-mcp.md)：寫作時 LLM 相關文章建議 |
+| **現在** | **v1.1 shipped**（在 v1.0 之上）：可編 SEO · AI 產生 SEO · 編輯器站內搜尋 · [MCP](docs/integrations-mcp.md) |
+| **可選後續** | S3b 寫作時 LLM 相關建議；HTML 上傳篇 AI SEO；見 [v1.1 spec](docs/specs/v1.1-ai-seo-mcp.md) |

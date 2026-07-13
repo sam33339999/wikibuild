@@ -5,22 +5,20 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 ## Repo status — read this first
 
 - **`README.md`** — what the project is, tech stack, differentiators (keep short).
-- **`docs/specs/`** — planned work. Next: [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md).
+- **`docs/specs/`** — shipped + optional follow-ups. v1.1: [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md) (**shipped**; S3b optional).
 - **`AGENTS.md`** (this file) — how to run, architecture seams, commands.
 
-**M0–M7 COMPLETE → v1.0 delivered.** Do not re-propose the locked stack or re-implement shipped milestones unless fixing bugs.
+**v1.0 (M0–M7) + v1.1 (S1–S2–S3a–S4) delivered.** Do not re-propose the locked stack or re-implement shipped milestones unless fixing bugs. Optional: S3b LLM related-article suggestions while writing.
 
 Implemented (high level):
-- `internal/model/` — `Article` (`ShowTOC`, `PublishAt`, `PreviewToken`, `Pinned`, …), `User`, `Redirect`
-- `internal/config/`, `clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/`, `sitebrand/`
+- `internal/model/` — `Article` (SEO fields, `ShowTOC`, `PublishAt`, `PreviewToken`, `Pinned`, …), `User`, `Redirect`
+- `internal/config/`, `clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/`, `sitebrand/`, `llm/`, `mcp/`
 - `internal/store/` — Repository + inmem + postgres(sqlc); settings, tags, redirects
-- `internal/handler/` + `internal/server/` — full admin/public surface; `/static/*`
-- `views/` — layout (theme, auto SEO meta/JSON-LD), admin, public (floating TOC)
+- `internal/handler/` + `internal/server/` — full admin/public surface; AI SEO; editor search API; `/static/*`
+- `views/` — layout (SEO meta/JSON-LD), admin (SEO form, AI button, search panel), public (floating TOC)
 - `db/migrations/` through `000006_article_seo`
-- `static/` — site.css (Claude-adjacent reading UI), toc-sidebar.js, editor, theme
-- `cmd/wikibuild`, `cmd/resetadmin`
-
-**v1.1 core shipped:** S1 SEO fields · S2 AI SEO · S3a editor search · S4 MCP (`wikibuild mcp`). Optional: S3b LLM related suggestions.
+- `static/` — site.css, toc-sidebar.js, editor, editor-search.js, ai-seo.js, theme
+- `cmd/wikibuild` (HTTP + `mcp` subcommand), `cmd/resetadmin`
 
 ## Toolchain (must be on PATH)
 
