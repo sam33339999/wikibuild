@@ -359,7 +359,7 @@ func Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand)
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</span></a><nav class=\"site-nav\" aria-label=\"主要\"><a href=\"/\"><span>首頁</span></a> <a href=\"/search\"><span>搜尋</span></a> <a href=\"/archive\"><span>封存</span></a> <a href=\"/feed\"><span>RSS</span></a> <a href=\"/admin\" class=\"nav-quiet\"><span>後台</span></a> <span class=\"theme-switcher\" role=\"group\" aria-label=\"主題\"><button type=\"button\" data-theme-set=\"light\" aria-pressed=\"false\" title=\"淺色\"><i data-lucide=\"sun\" class=\"icon icon-sm\" aria-hidden=\"true\"></i></button> <button type=\"button\" data-theme-set=\"dark\" aria-pressed=\"false\" title=\"深色\"><i data-lucide=\"moon\" class=\"icon icon-sm\" aria-hidden=\"true\"></i></button> <button type=\"button\" data-theme-set=\"auto\" aria-pressed=\"true\" title=\"跟隨系統\"><i data-lucide=\"monitor\" class=\"icon icon-sm\" aria-hidden=\"true\"></i></button></span></nav></header><main class=\"site-main\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</span></a><nav class=\"site-nav\" aria-label=\"主要\"><a href=\"/\"><span>首頁</span></a> <a href=\"/search\"><span>搜尋</span></a> <a href=\"/archive\"><span>封存</span></a> <a href=\"/admin\" class=\"nav-quiet\"><span>後台</span></a> <span class=\"theme-switcher\" role=\"group\" aria-label=\"主題\"><button type=\"button\" data-theme-set=\"light\" aria-pressed=\"false\" title=\"淺色\"><i data-lucide=\"sun\" class=\"icon icon-sm\" aria-hidden=\"true\"></i></button> <button type=\"button\" data-theme-set=\"dark\" aria-pressed=\"false\" title=\"深色\"><i data-lucide=\"moon\" class=\"icon icon-sm\" aria-hidden=\"true\"></i></button> <button type=\"button\" data-theme-set=\"auto\" aria-pressed=\"true\" title=\"跟隨系統\"><i data-lucide=\"monitor\" class=\"icon icon-sm\" aria-hidden=\"true\"></i></button></span></nav></header><main class=\"site-main\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -374,7 +374,7 @@ func Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand)
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(brand.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 122, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 119, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -392,7 +392,7 @@ func Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand)
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(brand.Author)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 124, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 121, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -415,7 +415,7 @@ func Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand)
 			var templ_7745c5c3_Var21 templ.SafeURL
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinURLErrs(brand.GitHubURL())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 129, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 126, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -434,7 +434,7 @@ func Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand)
 			var templ_7745c5c3_Var22 templ.SafeURL
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinURLErrs(brand.XURL())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 135, Col: 28}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 132, Col: 28}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 			if templ_7745c5c3_Err != nil {
@@ -453,7 +453,7 @@ func Page(title string, content templ.Component, seo SEO, brand sitebrand.Brand)
 			var templ_7745c5c3_Var23 templ.SafeURL
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinURLErrs(brand.Mailto())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 141, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/layout/layout.templ`, Line: 138, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {

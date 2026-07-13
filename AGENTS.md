@@ -4,27 +4,26 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 
 ## Repo status — read this first
 
-`README.md` is the design spec / roadmap (tech stack, data model, routes, MVP scope, milestones M0–M7). `AGENTS.md` = how to actually work here.
+- **`README.md`** — what the project is, tech stack, differentiators (keep short).
+- **`docs/specs/`** — planned work. Next: [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md).
+- **`AGENTS.md`** (this file) — how to run, architecture seams, commands.
 
-**M0–M7 COMPLETE → v1.0 scope delivered.** Single-binary personal wiki/blog: admin + public, Markdown/HTML, visibility, discovery, publish/distribute, themed front-end.
+**M0–M7 COMPLETE → v1.0 delivered.** Do not re-propose the locked stack or re-implement shipped milestones unless fixing bugs.
 
-Implemented:
-- `internal/model/` — `Article` (+ `PublishAt`, `PreviewToken`, `Pinned`), `User`, `Redirect`
-- `internal/config/` — env loading; `BaseURL`, `SiteTitle`
-- `internal/clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/` (JSON-LD)
-- `internal/store/` — Articles + Tags + Redirects + Settings + Users (inmem + postgres)
-- `internal/handler/` — full admin + public surface (search, archive, tags, preview, feeds, redirects, comments)
-- `internal/server/` — Fiber assembly; `/static/*` theme assets; discovery routes before `/:slug`
-- `static/css/site.css`, `static/js/theme.js` — light/dark/auto theme + layout polish (no npm)
-- `views/` — layout chrome (header, theme toggle, SEO/JSON-LD), admin + public pages
-- `db/` — migrations through `000004_m6_publish`
-- `cmd/wikibuild/main.go` — ensureAdmin + publisher ticker + graceful shutdown
+Implemented (high level):
+- `internal/model/` — `Article` (`ShowTOC`, `PublishAt`, `PreviewToken`, `Pinned`, …), `User`, `Redirect`
+- `internal/config/`, `clock/`, `auth/`, `gate/`, `render/`, `media/`, `feed/`, `scheduler/`, `seo/`, `sitebrand/`
+- `internal/store/` — Repository + inmem + postgres(sqlc); settings, tags, redirects
+- `internal/handler/` + `internal/server/` — full admin/public surface; `/static/*`
+- `views/` — layout (theme, auto SEO meta/JSON-LD), admin, public (floating TOC)
+- `db/migrations/` through `000005_show_toc`
+- `static/` — site.css (Claude-adjacent reading UI), toc-sidebar.js, editor, theme
+- `cmd/wikibuild`, `cmd/resetadmin`
 
-v1.1+ (OUT): version history, backup, series, related posts, image optimisation, etc.
+**Not in admin UI yet:** per-article SEO title / meta description / OG image (auto-only). Spec: v1.1 S1.
 
 ## Toolchain (must be on PATH)
 
-`sqlc`, `templ`, `migrate` CLIs are required for `make generate` / `make migrate-*`. Install:
 ```
 go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 go install github.com/a-h/templ/cmd/templ@latest
@@ -34,62 +33,47 @@ go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@lates
 ## Architecture seam (how to add features)
 
 Handlers and logic depend **only on `store.Repository`**. Workflow:
-1. Write a unit test against `inmem.New()` (fast, no DB).
+1. Unit test against `inmem.New()` (fast, no DB).
 2. Implement logic/handler.
-3. Add an integration test (build tag `integration`) against the postgres impl once it exists.
+3. Integration test (`//go:build integration`) against postgres when touching SQL.
 
-- Inject `clock.Clock` for anything time-related (scheduled publish, timestamps). Never call `time.Now()` directly in logic under test.
-- Assert errors with `errors.Is(err, store.ErrNotFound)`, etc.
-- `model.Article` uses `*time.Time` for nullable timestamps; the pg layer must translate to/from `pgtype` / `sql.NullTime`.
-- **Clone form values before persisting**: `c.FormValue` returns strings backed by fasthttp's reusable request buffer — storing them beyond the handler (in the DB) corrupts them on the next request. Use `strings.Clone` (see `articleFromForm`).
-- **Fiber radix route order matters**: register static routes (`/admin`, `/admin/new`, `/admin/settings`) **before** parameter routes (`/:slug`, `/:id`) at the same path depth, or the param shadows the static path.
-- The pg layer normalises nil `Tags` → `[]string{}` so the NOT NULL `tags` column gets `'{}'` not `NULL`.
+- Inject `clock.Clock` for time; never `time.Now()` in tested logic.
+- Assert with `errors.Is(err, store.ErrNotFound)`, etc.
+- `model.Article` nullable times `*time.Time`; pg maps `pgtype` / nulls.
+- **Clone form values** before persist (`strings.Clone` / `articleFromForm`).
+- **Fiber route order:** static paths before `/:slug` / `/:id` at same depth.
+- Nil `Tags` → `[]string{}` in pg layer.
+- Never hand-edit `internal/store/sqlc/` or `*_templ.go`; run `make generate`.
 
 ## Locked tech stack — don't propose alternatives
 
-Go 1.26.3 · Fiber v3 · PostgreSQL via `pgx` · **sqlc** (codegen) · **templ** (codegen) · golang-migrate · Alpine.js + HTMX + Milkdown (frontend). **No SPA framework, no npm build** — frontend is script-tag only. Rationale lives in README.
+Go 1.26 · Fiber v3 · PostgreSQL + pgx · **sqlc** · **templ** · golang-migrate · Vditor + script-tag front-end. **No SPA, no npm build.**
 
-## Commands (verified)
+## Commands
 
 ```
-make generate          # sqlc generate + templ generate (CLIs on PATH)
-make run               # go run ./cmd/wikibuild (needs DATABASE_URL + admin env)
-make build             # go build -o wikibuild ./cmd/wikibuild
-make migrate-up        # applies db/migrations to DB_URL (default local pg)
-make migrate-down      # rolls back one migration
-make test              # unit tests ONLY (integration excluded by build tag)
-make test-integration  # needs Docker (testcontainers → postgres:16-alpine)
-make vet               # go vet ./...
-make cover             # coverage
-make fmt               # gofmt -w
-make tidy              # go mod tidy
+make generate          # sqlc + templ
+make run               # needs DATABASE_URL + admin env; schema via migrate-up first
+make build
+make migrate-up | migrate-down
+make test              # unit only
+make test-integration  # Docker / testcontainers
+make vet | cover | fmt | tidy
+make db-up | db-down | db-logs
 ```
-
-Single test / package:
-```
-go test ./internal/store/inmem/... -run TestCreateArticle_DuplicateSlug -v
-```
-
-There is **no separate lint or typecheck step**. Verify code with: `go build ./... && go vet ./...`.
-
-## Commands that DON'T work yet (despite README)
-
-- `make run` runs but the running server needs the schema applied first (`make migrate-up`) and the required env vars (`DATABASE_URL`, `WIKIBUILD_ADMIN_USER`, `WIKIBUILD_ADMIN_PASS`, `WIKIBUILD_SESSION_SECRET`).
 
 ## Dev database + .env
 
-- `compose.yaml` runs Postgres 16 only (the app runs on the host). `make db-up` / `db-down` / `db-logs` wrap `docker compose`.
-- `.env` is the single config source for dev: compose reads `POSTGRES_*` from it, the app loads it via `godotenv` (real env vars still override), and the Makefile `-include`s it so `make migrate-up` picks up `DATABASE_URL`. `.env.example` is the committed template (`cp .env.example .env`); `.env` itself is gitignored.
+- `compose.yaml` — Postgres 16 only; app on host.
+- `.env` from `.env.example` (gitignored). Compose + godotenv + Makefile `-include`.
 
 ## Testing quirks
 
-- Integration tests carry `//go:build integration`; plain `go test ./...` skips them — unit-only runs look low-coverage by design.
-- `go mod tidy` keeps the testcontainers deps even though they're imported only under the build tag. This is correct; don't strip them.
-- Integration tests need **Docker**; no manual Postgres required (testcontainers provisions it).
+- Integration tests: `//go:build integration`; plain `go test ./...` skips them.
+- Keep testcontainers in `go.mod` even if only used under the build tag.
 
 ## Conventions
 
-- Module path: `github.com/sam33339999/wikibuild` (all imports use it).
-- Future generated code (`internal/store/sqlc/`, `views/*_templ.go`) must never be hand-edited.
-- `opencode.json` sets `permission: "allow"` project-wide.
-- README = design source of truth; this file = how to actually work here right now.
+- Module: `github.com/sam33339999/wikibuild`
+- New product work: implement against an existing **spec under `docs/specs/`**, or add a spec first for multi-slice features.
+- `opencode.json` permission allow project-wide.
