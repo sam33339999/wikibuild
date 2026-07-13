@@ -296,7 +296,7 @@ func ArticleForm(action string, a *model.Article, csrfToken string) templ.Compon
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, ">private</option></select></label></p><p><button type=\"submit\">儲存</button></p></form>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, ">private</option></select></label></p><p><label>protected 密碼（留空用全站預設；編輯時留空=保留原密碼）<br><input name=\"password\" type=\"password\" autocomplete=\"new-password\"></label></p><p><button type=\"submit\">儲存</button></p></form>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -10,6 +10,7 @@ import (
 	"github.com/a-h/templ"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/csrf"
+	"github.com/sam33339999/wikibuild/internal/auth"
 	"github.com/sam33339999/wikibuild/internal/model"
 	"github.com/sam33339999/wikibuild/internal/store"
 	adminviews "github.com/sam33339999/wikibuild/views/admin"
@@ -17,15 +18,17 @@ import (
 )
 
 // ArticleAdmin handles admin article CRUD. It depends only on store.Repository
-// so it is unit-tested against inmem. Markdown rendering happens on the public
-// side (M1.3); admin forms store raw markdown.
+// and auth.PasswordHasher so it is unit-tested against inmem with a fake
+// hasher. The protected-article password field is bcrypt-hashed on save.
 type ArticleAdmin struct {
-	repo store.Repository
+	repo   store.Repository
+	hasher auth.PasswordHasher
 }
 
 // NewArticleAdmin builds an ArticleAdmin backed by the given repository.
-func NewArticleAdmin(repo store.Repository) *ArticleAdmin {
-	return &ArticleAdmin{repo: repo}
+// hasher hashes per-article protected passwords.
+func NewArticleAdmin(repo store.Repository, hasher auth.PasswordHasher) *ArticleAdmin {
+	return &ArticleAdmin{repo: repo, hasher: hasher}
 }
 
 // List shows every article (newest first) for the admin overview.
@@ -48,6 +51,7 @@ func (h *ArticleAdmin) NewForm(c fiber.Ctx) error {
 func (h *ArticleAdmin) Create(c fiber.Ctx) error {
 	a := articleFromForm(c)
 	a.Type = model.ArticleTypeMarkdown
+	a.Password = hashPasswordIfSet(c, h.hasher)
 
 	created, err := h.repo.CreateArticle(c.Context(), a)
 	if err != nil {
@@ -91,6 +95,8 @@ func (h *ArticleAdmin) Update(c fiber.Ctx) error {
 	updated.ID = existing.ID
 	updated.Type = existing.Type // type is immutable in M1 (markdown; M3 adds html_upload)
 	updated.CreatedAt = existing.CreatedAt
+	// Empty password on edit means "keep current"; a non-empty value re-hashes.
+	updated.Password = keepOrHashPassword(c, h.hasher, existing.Password)
 
 	if _, err := h.repo.UpdateArticle(c.Context(), updated); err != nil {
 		if errors.Is(err, store.ErrDuplicateSlug) {
@@ -117,20 +123,55 @@ func (h *ArticleAdmin) Delete(c fiber.Ctx) error {
 }
 
 // articleFromForm reads the shared form fields into a model.Article. Used by
-// both Create and Update so the field set stays in one place.
+// both Create and Update so the field set stays in one place. The protected
+// password is handled separately (see hashPasswordIfSet/keepOrHashPassword)
+// because its edit semantics differ (blank = keep current).
+//
+// Form values are cloned: Fiber/fasthttp backs c.FormValue strings with a
+// per-request buffer that is reused after the handler returns, so anything
+// stored beyond the request (in the DB) must be copied.
 func articleFromForm(c fiber.Ctx) model.Article {
 	return model.Article{
-		Slug:       strings.TrimSpace(c.FormValue("slug")),
-		Title:      strings.TrimSpace(c.FormValue("title")),
-		Body:       c.FormValue("body"),
+		Slug:       strings.Clone(strings.TrimSpace(c.FormValue("slug"))),
+		Title:      strings.Clone(strings.TrimSpace(c.FormValue("title"))),
+		Body:       strings.Clone(c.FormValue("body")),
 		Tags:       parseTags(c.FormValue("tags")),
-		Status:     model.Status(c.FormValue("status")),
-		Visibility: model.Visibility(c.FormValue("visibility")),
+		Status:     model.Status(strings.Clone(c.FormValue("status"))),
+		Visibility: model.Visibility(strings.Clone(c.FormValue("visibility"))),
 	}
 }
 
+// hashPasswordIfSet hashes a non-empty "password" form field for new articles;
+// an empty field leaves the article with no article-specific password (the
+// site default applies).
+func hashPasswordIfSet(c fiber.Ctx, h auth.PasswordHasher) string {
+	pw := strings.Clone(c.FormValue("password"))
+	if pw == "" {
+		return ""
+	}
+	hash, err := h.Hash(pw)
+	if err != nil {
+		return ""
+	}
+	return hash
+}
+
+// keepOrHashPassword hashes a non-empty "password" field on edit; an empty
+// field preserves the existing hash so editing other fields doesn't clear it.
+func keepOrHashPassword(c fiber.Ctx, h auth.PasswordHasher, existing string) string {
+	pw := strings.Clone(c.FormValue("password"))
+	if pw == "" {
+		return existing
+	}
+	hash, err := h.Hash(pw)
+	if err != nil {
+		return existing
+	}
+	return hash
+}
+
 // parseTags splits a comma-separated tag string, trimming whitespace and
-// dropping empties.
+// dropping empties. Each tag is cloned (fasthttp reuses form buffers).
 func parseTags(s string) []string {
 	if s == "" {
 		return nil
@@ -139,7 +180,7 @@ func parseTags(s string) []string {
 	tags := make([]string, 0, len(parts))
 	for _, p := range parts {
 		if t := strings.TrimSpace(p); t != "" {
-			tags = append(tags, t)
+			tags = append(tags, strings.Clone(t))
 		}
 	}
 	return tags

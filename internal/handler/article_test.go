@@ -24,7 +24,7 @@ import (
 func articleApp(t *testing.T) (*fiber.App, store.Repository) {
 	t.Helper()
 	repo := inmem.New()
-	h := handler.NewArticleAdmin(repo)
+	h := handler.NewArticleAdmin(repo, fakeHasher{})
 	app := fiber.New()
 	app.Get("/admin", h.List)
 	app.Get("/admin/new", h.NewForm)

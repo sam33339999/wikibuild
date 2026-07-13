@@ -39,11 +39,12 @@ func buildApp(t *testing.T) *fiber.App {
 
 	fc := clock.NewFake(time.Unix(1_700_000_000, 0))
 	app := server.New(server.Deps{
-		Store:   repo,
-		Hasher:  fakeHasher{},
-		Signer:  auth.NewSigner("supersecretkey1234", fc),
-		Limiter: auth.NewLoginLimiter(fc, auth.DefaultLimiterConfig()),
-		Clock:   fc,
+		Store:           repo,
+		Hasher:          fakeHasher{},
+		Signer:          auth.NewSigner("supersecretkey1234", fc),
+		Limiter:         auth.NewLoginLimiter(fc, auth.DefaultLimiterConfig()),
+		Clock:           fc,
+		SiteDefaultPass: "sitedefault",
 	})
 	return app
 }
@@ -242,4 +243,61 @@ func TestServer_PublicPages_RenderArticle(t *testing.T) {
 	artBody, _ := io.ReadAll(art.Body)
 	require.Contains(t, string(artBody), "<h1")
 	require.Contains(t, string(artBody), "<strong>markdown</strong>")
+}
+
+func TestServer_ProtectedArticle_UnlockFlow(t *testing.T) {
+	app := buildApp(t)
+	cookies := loginSession(t, app)
+
+	// Create a published, protected article with no per-article password
+	// (falls back to the site default "sitedefault").
+	tok := getCSRF(t, app, "/admin/new", cookies)
+	form := url.Values{}
+	form.Set("slug", "protected-post")
+	form.Set("title", "Protected Post")
+	form.Set("body", "# Secret\n\nhidden")
+	form.Set("status", "published")
+	form.Set("visibility", "protected")
+	form.Set("_csrf", tok)
+	_, err := do(app, http.MethodPost, "/admin/new", strings.NewReader(form.Encode()), cookies)
+	require.NoError(t, err)
+
+	// Anonymous reader is redirected to the unlock page.
+	resp, err := do(app, http.MethodGet, "/protected-post", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusFound, resp.StatusCode)
+	require.Equal(t, "/protected-post/unlock", resp.Header.Get("Location"))
+
+	// Fetch the unlock form (carries a fresh CSRF token + cookie).
+	unlockResp, err := do(app, http.MethodGet, "/protected-post/unlock", nil, nil)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, unlockResp.StatusCode)
+	unlockBody, _ := io.ReadAll(unlockResp.Body)
+	m := regexp.MustCompile(`name="_csrf" value="([^"]+)"`).FindSubmatch(unlockBody)
+	require.Len(t, m, 2)
+	pubCookies := unlockResp.Cookies()
+
+	// Submit the site default password with the CSRF token.
+	form = url.Values{}
+	form.Set("password", "sitedefault")
+	form.Set("_csrf", string(m[1]))
+	submit, err := do(app, http.MethodPost, "/protected-post/unlock",
+		strings.NewReader(form.Encode()), pubCookies)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusSeeOther, submit.StatusCode)
+	require.Equal(t, "/protected-post", submit.Header.Get("Location"))
+
+	// Collect the unlock cookie and view the now-unlocked article.
+	var unlockCookie *http.Cookie
+	for _, c := range submit.Cookies() {
+		if strings.HasPrefix(c.Name, "wikibuild_unlock_") {
+			unlockCookie = c
+		}
+	}
+	require.NotNil(t, unlockCookie)
+	view, err := do(app, http.MethodGet, "/protected-post", nil, []*http.Cookie{unlockCookie})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, view.StatusCode)
+	viewBody, _ := io.ReadAll(view.Body)
+	require.Contains(t, string(viewBody), "hidden")
 }

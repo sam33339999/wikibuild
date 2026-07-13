@@ -1,0 +1,17 @@
+package public
+
+// Unlock renders the password form for a protected article. errMsg is shown
+// when a previous submission failed (empty on first view).
+templ Unlock(slug string, csrfToken string, errMsg string) {
+	<article>
+		<h1>此文章受密碼保護</h1>
+		if errMsg != "" {
+			<p class="error">{ errMsg }</p>
+		}
+		<form method="post" action={ "/" + slug + "/unlock" }>
+			<input type="hidden" name="_csrf" value={ csrfToken }/>
+			<p><label>密碼<br/><input name="password" type="password" required/></label></p>
+			<p><button type="submit">解鎖</button></p>
+		</form>
+	</article>
+}

@@ -66,11 +66,12 @@ func run() error {
 
 	clk := clock.Real{}
 	app := server.New(server.Deps{
-		Store:   repo,
-		Hasher:  auth.NewPasswordHasher(),
-		Signer:  auth.NewSigner(cfg.SessionSecret, clk),
-		Limiter: auth.NewLoginLimiter(clk, auth.DefaultLimiterConfig()),
-		Clock:   clk,
+		Store:           repo,
+		Hasher:          auth.NewPasswordHasher(),
+		Signer:          auth.NewSigner(cfg.SessionSecret, clk),
+		Limiter:         auth.NewLoginLimiter(clk, auth.DefaultLimiterConfig()),
+		Clock:           clk,
+		SiteDefaultPass: cfg.DefaultProtectedPass,
 	})
 
 	// Graceful shutdown on SIGINT / SIGTERM.

@@ -18,11 +18,12 @@ import (
 // Deps holds the collaborators the server needs to run. Every field is an
 // abstraction, so tests build the app with an inmem store and fakes.
 type Deps struct {
-	Store   store.Repository
-	Hasher  auth.PasswordHasher
-	Signer  *auth.Signer
-	Limiter *auth.LoginLimiter
-	Clock   clock.Clock
+	Store           store.Repository
+	Hasher          auth.PasswordHasher
+	Signer          *auth.Signer
+	Limiter         *auth.LoginLimiter
+	Clock           clock.Clock
+	SiteDefaultPass string // fallback password for protected articles without their own
 }
 
 // New builds the configured Fiber app. The caller starts it with app.Listen().
@@ -46,7 +47,7 @@ func New(d Deps) *fiber.App {
 		Limiter: d.Limiter,
 		Clock:   d.Clock,
 	})
-	articleAdmin := handler.NewArticleAdmin(d.Store)
+	articleAdmin := handler.NewArticleAdmin(d.Store, d.Hasher)
 
 	// Public auth routes (no auth required).
 	app.Get("/admin/login", adminAuth.LoginPage)
@@ -66,9 +67,11 @@ func New(d Deps) *fiber.App {
 
 	// Public reader-facing pages (registered last; static /admin routes above
 	// take priority over the /:slug parameter route).
-	pub := handler.NewPublic(d.Store)
+	pub := handler.NewPublic(d.Store, d.Signer, d.Hasher, d.SiteDefaultPass)
 	app.Get("/", pub.Index)
 	app.Get("/:slug", pub.Article)
+	app.Get("/:slug/unlock", pub.UnlockForm)
+	app.Post("/:slug/unlock", pub.UnlockSubmit)
 
 	return app
 }
