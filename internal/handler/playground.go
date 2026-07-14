@@ -137,14 +137,16 @@ func (h *Playground) Stream(c fiber.Ctx) error {
 			return writeSSE(string(b))
 		}
 
-		// Keepalive comments every 8s while the model is thinking (no data frames).
-		// Prevents idle proxies/browsers from closing the stream mid tool-round.
+		// Keepalive every 4s: SSE comment + visible status event so the UI
+		// can show "still waiting" while a tool-round Chat blocks.
 		stopKA := make(chan struct{})
 		var kaOnce sync.Once
 		stopKeepalive := func() { kaOnce.Do(func() { close(stopKA) }) }
+		started := time.Now()
 		go func() {
-			t := time.NewTicker(8 * time.Second)
+			t := time.NewTicker(4 * time.Second)
 			defer t.Stop()
+			n := 0
 			for {
 				select {
 				case <-stopKA:
@@ -152,14 +154,21 @@ func (h *Playground) Stream(c fiber.Ctx) error {
 				case <-agentCtx.Done():
 					return
 				case <-t.C:
+					n++
 					_ = writeRaw(": keepalive\n\n")
+					// Also a real data frame so the browser UI updates (comments alone are silent).
+					sec := int(time.Since(started).Seconds())
+					_ = writeJSON(map[string]any{
+						"type":    "status",
+						"message": fmt.Sprintf("仍在等待模型… %ds（heartbeat %d）", sec, n),
+					})
 				}
 			}
 		}()
 		defer stopKeepalive()
 
 		// Immediate status so the client sees activity right away.
-		_ = writeJSON(map[string]any{"type": "status", "message": "connected"})
+		_ = writeJSON(map[string]any{"type": "status", "message": "connected · 開始處理"})
 
 		var runErr error
 		if useTools {

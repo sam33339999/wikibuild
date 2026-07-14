@@ -30,7 +30,7 @@ templ Playground(enabled bool, toolsAvailable bool, model string, csrfToken stri
 								<strong>Article tools</strong>（MCP 同源：list/get/create/update/status/visibility）
 							</label>
 						</p>
-						<p class="meta">開啟後模型可透過 tool use 讀寫本站文章（create 預設 draft+private）。</p>
+						<p class="meta">開啟後模型可透過 tool use 讀寫本站文章（create 預設 draft+private）。tool 回合期間會顯示即時進度。</p>
 					}
 					<label for="pg-message">Message</label>
 					<textarea id="pg-message" rows="5" placeholder="輸入問題…（Enter 送出，Shift+Enter 換行；中文候選確認不會送出）"></textarea>
@@ -38,13 +38,22 @@ templ Playground(enabled bool, toolsAvailable bool, model string, csrfToken stri
 						<button type="button" id="pg-send" class="ai-seo-btn">送出（stream）</button>
 						<button type="button" id="pg-stop" class="ai-seo-btn" disabled>停止</button>
 						<button type="button" id="pg-clear">清除對話</button>
-						<span id="pg-status" class="meta" aria-live="polite"></span>
 					</p>
 					<input type="hidden" name="_csrf" value={ csrfToken }/>
+					// Live phase panel — always visible during a run
+					<div id="pg-live" class="playground-live" hidden aria-live="polite">
+						<div class="playground-live-row">
+							<span class="playground-live-dot" aria-hidden="true"></span>
+							<strong id="pg-live-phase">待命</strong>
+							<span id="pg-live-elapsed" class="meta">0.0s</span>
+						</div>
+						<p id="pg-live-detail" class="meta playground-live-detail"></p>
+					</div>
+					<p id="pg-status" class="meta" aria-live="polite"></p>
 				</div>
 				<div class="playground-output-wrap">
 					<div class="playground-tabs meta">
-						<span>串流對話 / tool 事件</span>
+						<span>對話 / 進度 / tool 事件</span>
 						<label class="playground-raw-toggle">
 							<input type="checkbox" id="pg-show-raw"/> 顯示原始 Markdown
 						</label>

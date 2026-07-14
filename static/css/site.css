@@ -616,6 +616,55 @@ body:has(.admin-page) .site-footer {
 .admin-page.playground-page .playground-tools {
   margin: 0.65rem 0 0.25rem;
 }
+.admin-page.playground-page .playground-live {
+  margin-top: 0.85rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+}
+.admin-page.playground-page .playground-live.is-active {
+  animation: pg-live-pulse 1.6s ease-in-out infinite;
+}
+@keyframes pg-live-pulse {
+  50% { border-color: color-mix(in srgb, var(--accent) 70%, var(--border)); }
+}
+.admin-page.playground-page .playground-live-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+}
+.admin-page.playground-page .playground-live-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 50%, transparent);
+}
+.admin-page.playground-page .playground-live.is-active .playground-live-dot {
+  animation: pg-dot 1s ease-in-out infinite;
+}
+@keyframes pg-dot {
+  50% { transform: scale(1.25); opacity: 0.7; }
+}
+.admin-page.playground-page .playground-live-detail {
+  margin: 0.35rem 0 0;
+}
+.admin-page.playground-page .pg-turn-progress {
+  border: none;
+  background: transparent;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.8rem;
+  color: var(--fg-muted);
+}
+.admin-page.playground-page .pg-progress-time {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+.admin-page.playground-page .pg-tool-when {
+  margin-left: 0.35rem;
+}
 .admin-page.playground-page .pg-turn-assistant.is-streaming {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 }
