@@ -18,6 +18,7 @@ import (
 	"github.com/sam33339999/wikibuild/internal/handler"
 	"github.com/sam33339999/wikibuild/internal/llm"
 	"github.com/sam33339999/wikibuild/internal/media"
+	wbmcp "github.com/sam33339999/wikibuild/internal/mcp"
 	"github.com/sam33339999/wikibuild/internal/store"
 )
 
@@ -98,7 +99,8 @@ func New(d Deps) *fiber.App {
 	if oc, ok := llmClient.(*llm.OpenAIClient); ok {
 		modelName = oc.ModelName()
 	}
-	playground := handler.NewPlayground(llmClient, modelName, nil)
+	articleTools := wbmcp.NewTools(d.Store, d.Clock)
+	playground := handler.NewPlayground(llmClient, modelName, articleTools, nil)
 	settings := handler.NewSettings(d.Store)
 	uploads := handler.NewUpload(d.Store, d.ContentDir, d.Hasher)
 	mediaH := handler.NewMedia(mediaDir(d))

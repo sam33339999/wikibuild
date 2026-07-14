@@ -15,6 +15,7 @@
   var rawEl = document.getElementById("pg-raw");
   var statusEl = document.getElementById("pg-status");
   var showRaw = document.getElementById("pg-show-raw");
+  var toolsEl = document.getElementById("pg-tools");
   if (!sendBtn || !msgEl || !transcript) return;
 
   /** @type {{role:string, content:string}[]} */
@@ -52,10 +53,11 @@
     wrap.className = "pg-turn pg-turn-" + role + (streaming ? " is-streaming" : "");
     var label = document.createElement("div");
     label.className = "pg-turn-role meta";
-    label.textContent = role === "user" ? "You" : "Assistant";
+    label.textContent =
+      role === "user" ? "You" : role === "tool" ? "Tool" : "Assistant";
     var body = document.createElement("div");
     body.className = "pg-turn-body content";
-    if (role === "user") {
+    if (role === "user" || role === "tool") {
       body.textContent = content;
     } else {
       body.innerHTML = mdHTML(content);
@@ -65,6 +67,27 @@
     transcript.appendChild(wrap);
     transcript.scrollTop = transcript.scrollHeight;
     return { wrap: wrap, body: body };
+  }
+
+  function appendToolCard(kind, name, detail) {
+    var wrap = document.createElement("div");
+    wrap.className = "pg-turn pg-turn-tool pg-tool-" + kind;
+    var label = document.createElement("div");
+    label.className = "pg-turn-role meta";
+    label.textContent = kind === "tool_call" ? "Tool call" : "Tool result";
+    var body = document.createElement("div");
+    body.className = "pg-turn-body";
+    var title = document.createElement("code");
+    title.textContent = name || "";
+    body.appendChild(title);
+    var pre = document.createElement("pre");
+    pre.className = "pg-tool-detail";
+    pre.textContent = detail || "";
+    body.appendChild(pre);
+    wrap.appendChild(label);
+    wrap.appendChild(body);
+    transcript.appendChild(wrap);
+    transcript.scrollTop = transcript.scrollHeight;
   }
 
   function updateStream(content) {
@@ -132,6 +155,7 @@
           message: message,
           system: sysEl ? sysEl.value : "",
           messages: prior,
+          tools: !!(toolsEl && toolsEl.checked),
         }),
       });
 
@@ -169,7 +193,24 @@
               setStatus(obj.error, true);
               continue;
             }
+            if (obj.type === "tool_call") {
+              appendToolCard(
+                "tool_call",
+                obj.name,
+                obj.arguments || ""
+              );
+              continue;
+            }
+            if (obj.type === "tool_result") {
+              var resText = obj.result || "";
+              if (resText.length > 2000) resText = resText.slice(0, 2000) + "…";
+              appendToolCard("tool_result", obj.name, resText);
+              continue;
+            }
             if (obj.delta) {
+              if (!streamNode) {
+                streamNode = appendTurn("assistant", "", true);
+              }
               streamBuf += obj.delta;
               updateStream(streamBuf);
             }
@@ -230,10 +271,21 @@
       rawEl.hidden = !showRaw.checked;
     });
   }
+  // IME (中文候選): do not submit while composing, or on Enter that confirms candidates.
+  var composing = false;
+  msgEl.addEventListener("compositionstart", function () {
+    composing = true;
+  });
+  msgEl.addEventListener("compositionend", function () {
+    composing = false;
+  });
   msgEl.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      send();
+    if (e.key !== "Enter" || e.shiftKey) return;
+    // keyCode 229 = IME processing on many browsers
+    if (composing || e.isComposing || e.keyCode === 229) {
+      return;
     }
+    e.preventDefault();
+    send();
   });
 })();

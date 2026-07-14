@@ -14,6 +14,9 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/sam33339999/wikibuild/internal/handler"
 	"github.com/sam33339999/wikibuild/internal/llm"
+	mcptools "github.com/sam33339999/wikibuild/internal/mcp"
+	"github.com/sam33339999/wikibuild/internal/model"
+	"github.com/sam33339999/wikibuild/internal/store/inmem"
 	"github.com/stretchr/testify/require"
 )
 
@@ -49,9 +52,19 @@ func (m *mockStreamClient) StreamChat(ctx context.Context, messages []llm.Messag
 	return nil
 }
 
+func (m *mockStreamClient) Chat(ctx context.Context, messages []llm.Message, tools []llm.ToolDef) (llm.ChatResult, error) {
+	// Default: no tools, return concatenated stream as final content.
+	m.calls++
+	m.lastMsg = messages
+	if m.err != nil {
+		return llm.ChatResult{}, m.err
+	}
+	return llm.ChatResult{Content: strings.Join(m.deltas, "")}, nil
+}
+
 func playgroundApp(t *testing.T, client llm.Client) *fiber.App {
 	t.Helper()
-	h := handler.NewPlayground(client, "test-model", nil)
+	h := handler.NewPlayground(client, "test-model", nil, nil)
 	app := fiber.New()
 	app.Get("/admin/playground", h.Page)
 	app.Post("/admin/ai/chat/stream", h.Stream)
@@ -163,13 +176,45 @@ func TestPlayground_Stream_MultiTurnHistory(t *testing.T) {
 func TestPlayground_Stream_InvalidHistoryRole(t *testing.T) {
 	client := &mockStreamClient{enabled: true}
 	app := playgroundApp(t, client)
-	payload := `{"message":"hi","messages":[{"role":"tool","content":"x"}]}`
+	payload := `{"message":"hi","messages":[{"role":"function","content":"x"}]}`
 	req := httptest.NewRequest(http.MethodPost, "/admin/ai/chat/stream", strings.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	require.Equal(t, 0, client.calls)
+}
+
+func TestPlayground_Stream_WithTools_EmitsToolEvents(t *testing.T) {
+	repo := inmem.New()
+	_, _ = repo.CreateArticle(context.Background(), model.Article{
+		Slug: "go", Title: "Go", Body: "x", Type: model.ArticleTypeMarkdown,
+		Status: model.StatusPublished, Visibility: model.VisibilityPublic,
+	})
+	tools := mcptools.NewTools(repo, nil)
+	client := &mockToolAgentClient{
+		enabled: true,
+		responses: []llm.ChatResult{
+			{ToolCalls: []llm.ToolCall{{ID: "c1", Name: "list_articles", Arguments: `{"q":"Go"}`}}},
+			{Content: "有一篇 Go 文章。"},
+		},
+	}
+	h := handler.NewPlayground(client, "m", tools, nil)
+	app := fiber.New()
+	app.Post("/admin/ai/chat/stream", h.Stream)
+	req := httptest.NewRequest(http.MethodPost, "/admin/ai/chat/stream",
+		strings.NewReader(`{"message":"list go posts","tools":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, fiber.TestConfig{Timeout: 5 * time.Second})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	require.Contains(t, s, `"type":"tool_call"`)
+	require.Contains(t, s, "list_articles")
+	require.Contains(t, s, `"type":"tool_result"`)
+	require.Contains(t, s, "有一篇")
+	require.Contains(t, s, "[DONE]")
 }
 
 func TestPlayground_Stream_ReadsSSELines(t *testing.T) {
@@ -192,7 +237,7 @@ func TestPlayground_Stream_ReadsSSELines(t *testing.T) {
 
 func TestPlayground_Stream_RateLimited(t *testing.T) {
 	client := &mockStreamClient{enabled: true, deltas: []string{"x"}}
-	h := handler.NewPlayground(client, "m", &handler.AISEOLimit{Max: 1, Window: time.Minute})
+	h := handler.NewPlayground(client, "m", nil, &handler.AISEOLimit{Max: 1, Window: time.Minute})
 	app := fiber.New()
 	app.Post("/admin/ai/chat/stream", h.Stream)
 	post := func() *http.Response {
@@ -206,4 +251,29 @@ func TestPlayground_Stream_RateLimited(t *testing.T) {
 	require.Equal(t, http.StatusOK, post().StatusCode)
 	require.Equal(t, http.StatusTooManyRequests, post().StatusCode)
 	require.Equal(t, 1, client.calls)
+}
+
+// mockToolAgentClient implements Chat for tool-loop tests (no stream).
+type mockToolAgentClient struct {
+	enabled   bool
+	responses []llm.ChatResult
+	calls     int
+}
+
+func (m *mockToolAgentClient) Enabled() bool { return m.enabled }
+func (m *mockToolAgentClient) GenerateSEO(ctx context.Context, title, body string) (llm.SEOResult, error) {
+	return llm.SEOResult{}, llm.ErrNotConfigured
+}
+func (m *mockToolAgentClient) SuggestRelated(ctx context.Context, selection string, catalog []llm.CatalogEntry) ([]llm.RelatedSuggestion, error) {
+	return nil, llm.ErrNotConfigured
+}
+func (m *mockToolAgentClient) StreamChat(ctx context.Context, messages []llm.Message, onDelta func(string) error) error {
+	return llm.ErrNotConfigured
+}
+func (m *mockToolAgentClient) Chat(ctx context.Context, messages []llm.Message, tools []llm.ToolDef) (llm.ChatResult, error) {
+	m.calls++
+	if m.calls-1 < len(m.responses) {
+		return m.responses[m.calls-1], nil
+	}
+	return llm.ChatResult{Content: "done"}, nil
 }

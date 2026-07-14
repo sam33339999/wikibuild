@@ -597,6 +597,25 @@ body:has(.admin-page) .site-footer {
   border-color: color-mix(in srgb, var(--link) 25%, var(--border));
   background: color-mix(in srgb, var(--link) 6%, var(--bg));
 }
+.admin-page.playground-page .pg-turn-tool {
+  border-style: dashed;
+  font-size: 0.88rem;
+  background: color-mix(in srgb, var(--code-bg) 80%, var(--bg));
+}
+.admin-page.playground-page .pg-tool-detail {
+  margin: 0.4rem 0 0;
+  padding: 0.45rem 0.55rem;
+  max-height: 10rem;
+  overflow: auto;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg) 90%, var(--border));
+}
+.admin-page.playground-page .playground-tools {
+  margin: 0.65rem 0 0.25rem;
+}
 .admin-page.playground-page .pg-turn-assistant.is-streaming {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
 }

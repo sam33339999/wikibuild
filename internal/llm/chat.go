@@ -46,8 +46,8 @@ func BuildChatMessages(systemPrompt string, history []Message, userMessage strin
 				content = ClipBody(content)
 			}
 			out = append(out, Message{Role: role, Content: content})
-		case "system":
-			// Ignore embedded system in history; top-level systemPrompt wins.
+		case "system", "tool":
+			// Ignore system/tool in client history; server agent owns tool turns.
 			continue
 		default:
 			return nil, ErrInvalidChat

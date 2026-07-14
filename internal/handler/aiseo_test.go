@@ -64,6 +64,10 @@ func (m *mockSEOClient) StreamChat(ctx context.Context, messages []llm.Message, 
 	return llm.ErrNotConfigured
 }
 
+func (m *mockSEOClient) Chat(ctx context.Context, messages []llm.Message, tools []llm.ToolDef) (llm.ChatResult, error) {
+	return llm.ChatResult{}, llm.ErrNotConfigured
+}
+
 func aiseoApp(t *testing.T, client llm.Client, contentDir, mediaDir string) (*fiber.App, store.Repository, *handler.AISEO) {
 	t.Helper()
 	repo := inmem.New()

@@ -28,8 +28,11 @@ type SEOResult struct {
 
 // Message is one chat message for OpenAI-compatible APIs.
 type Message struct {
-	Role    string
-	Content string
+	Role       string
+	Content    string
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`  // assistant
+	ToolCallID string     `json:"tool_call_id,omitempty"` // tool
+	Name       string     `json:"name,omitempty"`         // tool function name (optional)
 }
 
 // Client generates SEO fields, related suggestions, and optional chat streams.
@@ -40,4 +43,6 @@ type Client interface {
 	SuggestRelated(ctx context.Context, selection string, catalog []CatalogEntry) ([]RelatedSuggestion, error)
 	// StreamChat streams assistant text deltas (OpenAI stream:true). onDelta may be called many times.
 	StreamChat(ctx context.Context, messages []Message, onDelta func(delta string) error) error
+	// Chat is a non-stream completion, optionally with tools (for agent loops).
+	Chat(ctx context.Context, messages []Message, tools []ToolDef) (ChatResult, error)
 }

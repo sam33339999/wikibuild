@@ -37,7 +37,7 @@ func TestBuildChatMessages_EmptyUser(t *testing.T) {
 }
 
 func TestBuildChatMessages_RejectsBadHistoryRole(t *testing.T) {
-	_, err := llm.BuildChatMessages("", []llm.Message{{Role: "tool", Content: "x"}}, "hi")
+	_, err := llm.BuildChatMessages("", []llm.Message{{Role: "function", Content: "x"}}, "hi")
 	require.ErrorIs(t, err, llm.ErrInvalidChat)
 }
 

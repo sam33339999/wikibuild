@@ -1,8 +1,9 @@
 package admin
 
-// Playground is the admin multi-turn LLM streaming chat UI.
+// Playground is the admin multi-turn LLM streaming chat UI with optional article tools.
 // When enabled is false, shows configuration help instead of the form.
-templ Playground(enabled bool, model string, csrfToken string) {
+// toolsAvailable is true when the server wired MCP article tools.
+templ Playground(enabled bool, toolsAvailable bool, model string, csrfToken string) {
 	<div class="admin-page playground-page">
 		<h1>LLM Streaming Playground</h1>
 		<p><a href="/admin">← 文章列表</a></p>
@@ -16,14 +17,23 @@ templ Playground(enabled bool, model string, csrfToken string) {
 			<p class="meta">
 				模型：<code>{ model }</code> · OpenAI 兼容
 				<code>chat/completions</code> · <strong>SSE streaming</strong> ·
-				多輪對話 · 僅後台，不會寫入文章
+				多輪對話 · 僅後台
 			</p>
 			<div class="playground-layout">
 				<div class="playground-input">
 					<label for="pg-system">System（可選，全程共用）</label>
 					<textarea id="pg-system" rows="3" placeholder="你是有幫助的助理…"></textarea>
+					if toolsAvailable {
+						<p class="playground-tools">
+							<label>
+								<input type="checkbox" id="pg-tools" checked/>
+								<strong>Article tools</strong>（MCP 同源：list/get/create/update/status/visibility）
+							</label>
+						</p>
+						<p class="meta">開啟後模型可透過 tool use 讀寫本站文章（create 預設 draft+private）。</p>
+					}
 					<label for="pg-message">Message</label>
-					<textarea id="pg-message" rows="5" placeholder="輸入問題…（Enter 送出，Shift+Enter 換行）"></textarea>
+					<textarea id="pg-message" rows="5" placeholder="輸入問題…（Enter 送出，Shift+Enter 換行；中文候選確認不會送出）"></textarea>
 					<p class="playground-actions">
 						<button type="button" id="pg-send" class="ai-seo-btn">送出（stream）</button>
 						<button type="button" id="pg-stop" class="ai-seo-btn" disabled>停止</button>
@@ -31,17 +41,15 @@ templ Playground(enabled bool, model string, csrfToken string) {
 						<span id="pg-status" class="meta" aria-live="polite"></span>
 					</p>
 					<input type="hidden" name="_csrf" value={ csrfToken }/>
-					<p class="meta">對話歷史會一併送給模型（最多約 40 則）。</p>
 				</div>
 				<div class="playground-output-wrap">
 					<div class="playground-tabs meta">
-						<span>串流對話</span>
+						<span>串流對話 / tool 事件</span>
 						<label class="playground-raw-toggle">
 							<input type="checkbox" id="pg-show-raw"/> 顯示原始 Markdown
 						</label>
 					</div>
 					<div id="pg-transcript" class="playground-transcript" aria-live="polite"></div>
-					<div id="pg-output" class="playground-output content playground-streaming" hidden></div>
 					<pre id="pg-raw" class="playground-raw" hidden></pre>
 				</div>
 			</div>
