@@ -16,15 +16,24 @@ generate:
 # matches compose.yaml + .env.example.
 DATABASE_URL ?= postgres://wikibuild:wikibuild@localhost:5432/wikibuild?sslmode=disable
 
+# Prefer `migrate` on PATH; otherwise `go run` (needs network once to fetch module).
+# Install permanently: go install -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+MIGRATE ?= $(shell command -v migrate 2>/dev/null)
+ifeq ($(MIGRATE),)
+MIGRATE_CMD = go run -tags postgres github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+else
+MIGRATE_CMD = migrate
+endif
+
 migrate-up:
-	migrate -path db/migrations -database "$(DATABASE_URL)" up
+	$(MIGRATE_CMD) -path db/migrations -database "$(DATABASE_URL)" up
 
 migrate-down:
-	migrate -path db/migrations -database "$(DATABASE_URL)" down 1
+	$(MIGRATE_CMD) -path db/migrations -database "$(DATABASE_URL)" down 1
 
 # Force a migration version (recovery helper). Usage: make migrate-force V=1
 migrate-force:
-	migrate -path db/migrations -database "$(DATABASE_URL)" force $(V)
+	$(MIGRATE_CMD) -path db/migrations -database "$(DATABASE_URL)" force $(V)
 
 run:
 	go run ./cmd/wikibuild
