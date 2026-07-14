@@ -30,6 +30,7 @@ WIKIBUILD_LLM_MODEL=...
 | 停止 | AbortController 中斷 |
 | 清除 | 清空對話歷史 |
 | Rate limit | 預設 30 次 stream / 分鐘（process 內） |
+| 長任務 | tool 多輪：每 round 最長 ~120s、整段 stream 最長 ~6 分鐘；SSE `: keepalive` 防閒置斷線 |
 
 ### Article tools（勾選後）
 

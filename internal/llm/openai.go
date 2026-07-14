@@ -27,11 +27,25 @@ type OpenAIClient struct {
 	http    *http.Client
 }
 
+// DefaultHTTPTimeout is used for non-stream SEO/related calls.
+// Stream/tool agent use context deadlines instead (see Chat / StreamChat).
+const DefaultHTTPTimeout = 90 * time.Second
+
+// ChatRoundTimeout is the max wait for one non-stream chat/completions call
+// (one agent round). Tool loops may do several rounds.
+const ChatRoundTimeout = 120 * time.Second
+
+// StreamHTTPTimeout is a safety cap for a single streaming response.
+const StreamHTTPTimeout = 5 * time.Minute
+
 // NewOpenAIClient builds a client. Empty API key → Enabled() false.
+// HTTP client Timeout is 0 (no global deadline) so multi-round tool agents and
+// long SSE streams are not killed at 45s; each call uses a context deadline.
 func NewOpenAIClient(cfg OpenAIConfig) *OpenAIClient {
 	hc := cfg.HTTPClient
 	if hc == nil {
-		hc = &http.Client{Timeout: 45 * time.Second}
+		// Timeout: 0 — rely on context.WithTimeout per request.
+		hc = &http.Client{Timeout: 0}
 	}
 	return &OpenAIClient{
 		baseURL: strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/"),
@@ -95,6 +109,10 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []Message, tools []Too
 	if len(messages) == 0 {
 		return ChatResult{}, ErrEmptyBody
 	}
+	// One model round can be slow (tool planning); cap per round, not whole agent.
+	ctx, cancel := context.WithTimeout(ctx, ChatRoundTimeout)
+	defer cancel()
+
 	var apiMsgs []map[string]any
 	apiMsgs = appendToolMessages(apiMsgs, messages)
 	payload := map[string]any{
@@ -149,6 +167,9 @@ func (c *OpenAIClient) Chat(ctx context.Context, messages []Message, tools []Too
 }
 
 func (c *OpenAIClient) chatJSON(ctx context.Context, msgs []Message) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, DefaultHTTPTimeout)
+	defer cancel()
+
 	apiMsgs := make([]map[string]string, 0, len(msgs))
 	for _, m := range msgs {
 		apiMsgs = append(apiMsgs, map[string]string{"role": m.Role, "content": m.Content})

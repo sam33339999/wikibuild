@@ -181,6 +181,8 @@
         lineBuf = parts.pop() || "";
         for (var i = 0; i < parts.length; i++) {
           var line = parts[i].replace(/\r$/, "");
+          // SSE comment keepalive (": keepalive") — ignore
+          if (!line || line.charAt(0) === ":") continue;
           if (!line.startsWith("data:")) continue;
           var data = line.slice(5).trim();
           if (data === "[DONE]") {
@@ -193,7 +195,12 @@
               setStatus(obj.error, true);
               continue;
             }
+            if (obj.type === "status") {
+              setStatus(obj.message || "…", false);
+              continue;
+            }
             if (obj.type === "tool_call") {
+              setStatus("tool: " + (obj.name || "") + "…", false);
               appendToolCard(
                 "tool_call",
                 obj.name,
@@ -202,6 +209,7 @@
               continue;
             }
             if (obj.type === "tool_result") {
+              setStatus("tool done: " + (obj.name || ""), false);
               var resText = obj.result || "";
               if (resText.length > 2000) resText = resText.slice(0, 2000) + "…";
               appendToolCard("tool_result", obj.name, resText);
@@ -213,6 +221,7 @@
               }
               streamBuf += obj.delta;
               updateStream(streamBuf);
+              setStatus("串流中…", false);
             }
           } catch (e) {
             /* ignore */

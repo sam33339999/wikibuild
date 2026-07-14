@@ -87,6 +87,10 @@ func (c *OpenAIClient) StreamChat(ctx context.Context, messages []Message, onDel
 		onDelta = func(string) error { return nil }
 	}
 
+	// Cap a single stream so hung providers cannot hold the connection forever.
+	ctx, cancel := context.WithTimeout(ctx, StreamHTTPTimeout)
+	defer cancel()
+
 	apiMsgs := make([]map[string]string, 0, len(messages))
 	for _, m := range messages {
 		apiMsgs = append(apiMsgs, map[string]string{"role": m.Role, "content": m.Content})

@@ -2,11 +2,13 @@ package handler
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -15,6 +17,10 @@ import (
 	"github.com/sam33339999/wikibuild/internal/mcp"
 	adminviews "github.com/sam33339999/wikibuild/views/admin"
 )
+
+// PlaygroundAgentTimeout is the max wall time for one playground stream
+// (multi-round tool use can take several minutes).
+const PlaygroundAgentTimeout = 6 * time.Minute
 
 // Playground is the admin LLM streaming chat playground (optional article tools).
 type Playground struct {
@@ -54,6 +60,8 @@ type chatStreamReq struct {
 
 // Stream handles POST /admin/ai/chat/stream as text/event-stream.
 // Events: {"delta":...} | {"type":"tool_call",...} | {"type":"tool_result",...} | [DONE]
+// Sends SSE comments as keepalive while the model is thinking so browsers/proxies
+// do not close an idle long-running stream.
 func (h *Playground) Stream(c fiber.Ctx) error {
 	if h.client == nil || !h.client.Enabled() {
 		return c.Status(http.StatusServiceUnavailable).JSON(fiber.Map{"error": "llm not configured"})
@@ -68,7 +76,6 @@ func (h *Playground) Stream(c fiber.Ctx) error {
 
 	system := req.System
 	if req.Tools && h.tools != nil {
-		// Nudge the model to use tools when enabled.
 		hint := "You can use article tools to list/get/create/update WikiBuild posts. Prefer tools for site data. Defaults for create are draft+private."
 		if strings.TrimSpace(system) == "" {
 			system = hint
@@ -101,14 +108,26 @@ func (h *Playground) Stream(c fiber.Ctx) error {
 	c.Set("Connection", "keep-alive")
 	c.Set("X-Accel-Buffering", "no")
 	c.Status(http.StatusOK)
+
+	// Bound total agent time; still cancel if the client disconnects (parent ctx).
 	reqCtx := c.Context()
+	agentCtx, cancel := context.WithTimeout(reqCtx, PlaygroundAgentTimeout)
+	// cancel is called when the stream writer finishes (below).
 
 	return c.SendStreamWriter(func(w *bufio.Writer) {
-		writeSSE := func(payload string) error {
-			if _, err := fmt.Fprintf(w, "data: %s\n\n", payload); err != nil {
+		defer cancel()
+
+		var mu sync.Mutex
+		writeRaw := func(s string) error {
+			mu.Lock()
+			defer mu.Unlock()
+			if _, err := fmt.Fprint(w, s); err != nil {
 				return err
 			}
 			return w.Flush()
+		}
+		writeSSE := func(payload string) error {
+			return writeRaw(fmt.Sprintf("data: %s\n\n", payload))
 		}
 		writeJSON := func(v any) error {
 			b, err := json.Marshal(v)
@@ -118,12 +137,38 @@ func (h *Playground) Stream(c fiber.Ctx) error {
 			return writeSSE(string(b))
 		}
 
+		// Keepalive comments every 8s while the model is thinking (no data frames).
+		// Prevents idle proxies/browsers from closing the stream mid tool-round.
+		stopKA := make(chan struct{})
+		var kaOnce sync.Once
+		stopKeepalive := func() { kaOnce.Do(func() { close(stopKA) }) }
+		go func() {
+			t := time.NewTicker(8 * time.Second)
+			defer t.Stop()
+			for {
+				select {
+				case <-stopKA:
+					return
+				case <-agentCtx.Done():
+					return
+				case <-t.C:
+					_ = writeRaw(": keepalive\n\n")
+				}
+			}
+		}()
+		defer stopKeepalive()
+
+		// Immediate status so the client sees activity right away.
+		_ = writeJSON(map[string]any{"type": "status", "message": "connected"})
+
 		var runErr error
 		if useTools {
-			runErr = llm.RunAgent(reqCtx, h.client, h.tools, messages, llm.ArticleToolDefs(), func(ev llm.AgentEvent) error {
+			runErr = llm.RunAgent(agentCtx, h.client, h.tools, messages, llm.ArticleToolDefs(), func(ev llm.AgentEvent) error {
 				switch ev.Type {
 				case "delta":
 					return writeJSON(map[string]string{"delta": ev.Delta})
+				case "status":
+					return writeJSON(map[string]any{"type": "status", "message": ev.Message})
 				case "tool_call":
 					return writeJSON(map[string]any{
 						"type": "tool_call", "id": ev.ID, "name": ev.Name, "arguments": ev.Args,
@@ -137,13 +182,15 @@ func (h *Playground) Stream(c fiber.Ctx) error {
 				}
 			})
 		} else {
-			runErr = h.client.StreamChat(reqCtx, messages, func(delta string) error {
+			_ = writeJSON(map[string]any{"type": "status", "message": "streaming…"})
+			runErr = h.client.StreamChat(agentCtx, messages, func(delta string) error {
 				if delta == "" {
 					return nil
 				}
 				return writeJSON(map[string]string{"delta": delta})
 			})
 		}
+		stopKeepalive()
 		if runErr != nil {
 			_ = writeJSON(map[string]string{"error": runErr.Error()})
 		}
@@ -158,4 +205,3 @@ func (h *Playground) allow() bool {
 	tmp := &AISEO{limit: h.limit, now: time.Now}
 	return tmp.allow()
 }
-

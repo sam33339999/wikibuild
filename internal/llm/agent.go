@@ -15,13 +15,14 @@ type ToolExecutor interface {
 
 // AgentEvent is emitted during a tool-using chat (for SSE).
 type AgentEvent struct {
-	Type    string // delta | tool_call | tool_result | error
+	Type    string // delta | tool_call | tool_result | status | error
 	Delta   string `json:",omitempty"`
 	Name    string `json:",omitempty"`
 	ID      string `json:",omitempty"`
 	Args    string `json:",omitempty"`
 	Result  string `json:",omitempty"`
 	Error   string `json:",omitempty"`
+	Message string `json:",omitempty"` // status text for the UI
 }
 
 // ChatWithToolsClient is the subset needed for non-stream tool loops.
@@ -42,6 +43,9 @@ func RunAgent(ctx context.Context, client ChatWithToolsClient, exec ToolExecutor
 	msgs := append([]Message(nil), messages...)
 
 	for round := 0; round < MaxToolRounds; round++ {
+		if err := onEvent(AgentEvent{Type: "status", Message: fmt.Sprintf("model round %d…", round+1)}); err != nil {
+			return err
+		}
 		res, err := client.Chat(ctx, msgs, tools)
 		if err != nil {
 			return err
@@ -60,6 +64,9 @@ func RunAgent(ctx context.Context, client ChatWithToolsClient, exec ToolExecutor
 
 		for _, tc := range res.ToolCalls {
 			if err := onEvent(AgentEvent{Type: "tool_call", ID: tc.ID, Name: tc.Name, Args: tc.Arguments}); err != nil {
+				return err
+			}
+			if err := onEvent(AgentEvent{Type: "status", Message: "running " + tc.Name + "…"}); err != nil {
 				return err
 			}
 			result, err := exec.Execute(ctx, tc.Name, tc.Arguments)

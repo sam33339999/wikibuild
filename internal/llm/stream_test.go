@@ -61,6 +61,25 @@ func TestScanSSE_AccumulatesDeltas(t *testing.T) {
 	require.Equal(t, "Hello", out.String())
 }
 
+func TestScanSSE_IgnoresKeepaliveComments(t *testing.T) {
+	body := strings.Join([]string{
+		`: keepalive`,
+		``,
+		`data: {"choices":[{"delta":{"content":"ok"}}]}`,
+		``,
+		`: still-here`,
+		`data: [DONE]`,
+		``,
+	}, "\n")
+	var out strings.Builder
+	err := llm.ScanSSE(strings.NewReader(body), func(delta string) error {
+		out.WriteString(delta)
+		return nil
+	})
+	require.NoError(t, err)
+	require.Equal(t, "ok", out.String())
+}
+
 func TestOpenAIClient_StreamChat_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/v1/chat/completions", r.URL.Path)
