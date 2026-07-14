@@ -7,6 +7,7 @@ Guidance for OpenCode sessions working in this repo. Compact, high-signal only.
 - **`README.md`** — what the project is, tech stack, differentiators (keep short).
 - **`docs/specs/`** — v1.1 fully shipped: [`docs/specs/v1.1-ai-seo-mcp.md`](docs/specs/v1.1-ai-seo-mcp.md).
 - **`docs/integrations-mcp.md`** — MCP setup (Cursor/Claude) + tool reference.
+- **`docs/deploy-nginx.md`** — Nginx Proxy Manager + CSRF cookie / login troubleshooting.
 - **`AGENTS.md`** (this file) — how to run, architecture seams, commands.
 
 **v1.0 (M0–M7) + v1.1 complete** (S1–S4, S3b, HTML AI SEO, auto OG). Do not re-propose the locked stack or re-implement shipped milestones unless fixing bugs.

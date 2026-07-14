@@ -34,6 +34,12 @@ SEO control, AI assist, editor search, and MCP. Spec: [`specs/v1.1-ai-seo-mcp.md
 - OpenAI-compatible `stream: true`; live Markdown (marked + DOMPurify)
 - Docs: [`llm-playground.md`](./llm-playground.md)
 
+### Ops / deploy notes
+- Login CSRF failures redirect to `?err=csrf|cred|locked` with readable messages
+- CSRF cookies tuned for **TLS at Nginx Proxy Manager** (`CookieSecure=false`, TrustProxy)
+- Makefile falls back to `go run` when `migrate` CLI missing
+- Docs: [`deploy-nginx.md`](./deploy-nginx.md)（含 NPM 調整與上線 CSRF 事故紀錄）
+
 ## v1.0
 
 M0–M7: CRUD, visibility, MD/HTML upload, search/tags/archive, feeds/sitemap, theme, TOC, schedule/preview, etc.
