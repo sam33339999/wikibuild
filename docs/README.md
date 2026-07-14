@@ -5,6 +5,7 @@
 | [specs/v1.1-ai-seo-mcp.md](./specs/v1.1-ai-seo-mcp.md) | **v1.1 complete** (SEO, AI, search, related, OG, MCP) |
 | [integrations-mcp.md](./integrations-mcp.md) | **MCP 設定與工具手冊**（Cursor / Claude、6 tools） |
 | [llm-playground.md](./llm-playground.md) | **LLM Streaming Playground**（多輪 SSE） |
+| [deploy-nginx.md](./deploy-nginx.md) | **Nginx / Proxy Manager + CSRF cookie** |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本摘要 |
 
 Project pitch / stack / differentiators: root [`README.md`](../README.md).  

@@ -57,19 +57,27 @@ func New(d Deps) *fiber.App {
 	// BodyLimit must exceed media.MaxBytes so the image handler can reject
 	// oversized uploads with a typed error rather than Fiber's generic 413.
 	app := fiber.New(fiber.Config{
-		BodyLimit: media.MaxBytes + 512*1024,
+		BodyLimit:   media.MaxBytes + 512*1024,
+		// Behind Nginx / NPM on the same host: trust X-Forwarded-For from loopback.
+		ProxyHeader: fiber.HeaderXForwardedFor,
+		TrustProxy:  true,
+		TrustProxyConfig: fiber.TrustProxyConfig{
+			Proxies:  []string{"127.0.0.1", "::1"},
+			Loopback: true,
+			Private:  true,
+		},
 	})
 
 	app.Use(recover.New())
-	// CSRF: double-submit token readable from header or the _csrf form field,
-	// so the plain-HTML login form works without JS.
-	// CookieSecure is false so HTTP deploys (or TLS terminated at reverse proxy
-	// without X-Forwarded-Proto trust) still receive the csrf_ cookie.
+	// CSRF: double-submit — cookie csrf_ must match form field _csrf.
+	// CookieSecure=false so TLS-terminated-at-proxy (browser→HTTPS→nginx→HTTP→Go)
+	// still stores the cookie. Do not set CookieDomain (defaults to request host).
 	app.Use(csrf.New(csrf.Config{
 		Extractor: extractors.Chain(
 			extractors.FromHeader(csrf.HeaderName),
 			extractors.FromForm("_csrf"),
 		),
+		CookieName:     "csrf_",
 		CookieSameSite: "Lax",
 		CookieSecure:   false,
 		CookieHTTPOnly: true,
@@ -80,7 +88,7 @@ func New(d Deps) *fiber.App {
 				return c.Redirect().To("/admin/login?err=csrf")
 			}
 			return c.Status(fiber.StatusForbidden).SendString(
-				"CSRF 驗證失敗（Forbidden）。請重新整理頁面後再試；並允許 cookie。",
+				"CSRF 驗證失敗（Forbidden）。請重新整理頁面後再試；並允許 cookie。反向代理請見 docs/deploy-nginx.md",
 			)
 		},
 	}))
