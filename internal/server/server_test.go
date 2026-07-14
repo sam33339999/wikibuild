@@ -103,7 +103,9 @@ func TestServer_PostLoginWithoutCSRF_IsRejected(t *testing.T) {
 	resp, err := do(app, http.MethodPost, "/admin/login",
 		strings.NewReader(form.Encode()), nil)
 	require.NoError(t, err)
-	require.Equal(t, http.StatusForbidden, resp.StatusCode, "missing csrf token must be 403")
+	// Readable redirect instead of bare 403 Forbidden.
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode, "missing csrf redirects to login")
+	require.Equal(t, "/admin/login?err=csrf", resp.Header.Get("Location"))
 }
 
 func TestServer_FullLoginFlow_WithCSRF(t *testing.T) {

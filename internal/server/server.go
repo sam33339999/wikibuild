@@ -63,11 +63,26 @@ func New(d Deps) *fiber.App {
 	app.Use(recover.New())
 	// CSRF: double-submit token readable from header or the _csrf form field,
 	// so the plain-HTML login form works without JS.
+	// CookieSecure is false so HTTP deploys (or TLS terminated at reverse proxy
+	// without X-Forwarded-Proto trust) still receive the csrf_ cookie.
 	app.Use(csrf.New(csrf.Config{
 		Extractor: extractors.Chain(
 			extractors.FromHeader(csrf.HeaderName),
 			extractors.FromForm("_csrf"),
 		),
+		CookieSameSite: "Lax",
+		CookieSecure:   false,
+		CookieHTTPOnly: true,
+		CookiePath:     "/",
+		ErrorHandler: func(c fiber.Ctx, err error) error {
+			// Login form: redirect with a readable message instead of bare "Forbidden".
+			if c.Path() == "/admin/login" && c.Method() == fiber.MethodPost {
+				return c.Redirect().To("/admin/login?err=csrf")
+			}
+			return c.Status(fiber.StatusForbidden).SendString(
+				"CSRF 驗證失敗（Forbidden）。請重新整理頁面後再試；並允許 cookie。",
+			)
+		},
 	}))
 
 	// Theme CSS/JS (no build step). Registered early so /static is never

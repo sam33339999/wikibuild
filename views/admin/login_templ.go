@@ -9,7 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 // Login renders the admin login form with site chrome styling.
-func Login(csrfToken string) templ.Component {
+// errKey is an optional query error: csrf | cred | locked | other.
+func Login(csrfToken string, errKey string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -30,20 +31,45 @@ func Login(csrfToken string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Workbench · 登入</title><script>\n\t\t\t\t(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();\n\t\t\t</script><link rel=\"stylesheet\" href=\"/static/css/site.css\"></head><body class=\"theme-claude login-page\"><div class=\"login-card\"><p class=\"eyebrow\">後台</p><h1>登入</h1><form method=\"post\" action=\"/admin/login\"><input type=\"hidden\" name=\"_csrf\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<!doctype html><html lang=\"zh-Hant\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Workbench · 登入</title><script>\n\t\t\t\t(function(){try{var t=localStorage.getItem('wikibuild-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();\n\t\t\t</script><link rel=\"stylesheet\" href=\"/static/css/site.css\"></head><body class=\"theme-claude login-page\"><div class=\"login-card\"><p class=\"eyebrow\">後台</p><h1>登入</h1>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errKey == "csrf" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"login-error\" role=\"alert\">CSRF 驗證失敗（Forbidden）。請<strong>重新整理本頁</strong>後再登入一次， 並確認瀏覽器允許 cookie（站點 cookie <code>csrf_</code>）。 若走反向代理／HTTPS，請確認沒有剝掉 Set-Cookie。</p>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else if errKey == "cred" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<p class=\"login-error\" role=\"alert\">帳號或密碼錯誤。若剛改 .env，請在主機執行 <code>go run ./cmd/resetadmin</code> 再重試。</p>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else if errKey == "locked" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"login-error\" role=\"alert\">嘗試次數過多，請稍後再試。</p>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else if errKey != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<p class=\"login-error\" role=\"alert\">登入失敗，請重試。</p>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<form method=\"post\" action=\"/admin/login\"><input type=\"hidden\" name=\"_csrf\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/login.templ`, Line: 21, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `views/admin/login.templ`, Line: 35, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\"><p><label>username<br><input name=\"username\" autocomplete=\"username\" required></label></p><p><label>password<br><input name=\"password\" type=\"password\" autocomplete=\"current-password\" required></label></p><p><button type=\"submit\" class=\"btn-primary\">登入</button></p></form><p class=\"meta\" style=\"margin-top:1rem\"><a href=\"/\">← 回前台</a></p></div></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><p><label>username<br><input name=\"username\" autocomplete=\"username\" required></label></p><p><label>password<br><input name=\"password\" type=\"password\" autocomplete=\"current-password\" required></label></p><p><button type=\"submit\" class=\"btn-primary\">登入</button></p></form><p class=\"meta\" style=\"margin-top:1rem\"><a href=\"/\">← 回前台</a></p></div></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

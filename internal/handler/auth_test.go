@@ -95,16 +95,18 @@ func TestLoginSubmit_CorrectCredentials_RedirectsAndSetsCookie(t *testing.T) {
 	require.NotEmpty(t, resp.Header.Get("Set-Cookie"))
 }
 
-func TestLoginSubmit_WrongPassword_Unauthorized(t *testing.T) {
+func TestLoginSubmit_WrongPassword_RedirectsWithErr(t *testing.T) {
 	app, _ := buildApp(t)
 	resp := postForm(app, "/admin/login", testUser, "wrong")
-	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+	require.Equal(t, "/admin/login?err=cred", resp.Header.Get("Location"))
 }
 
-func TestLoginSubmit_UnknownUser_Unauthorized(t *testing.T) {
+func TestLoginSubmit_UnknownUser_RedirectsWithErr(t *testing.T) {
 	app, _ := buildApp(t)
 	resp := postForm(app, "/admin/login", "nobody", testPass)
-	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+	require.Equal(t, "/admin/login?err=cred", resp.Header.Get("Location"))
 }
 
 func TestLoginSubmit_LocksAfterMaxAttempts(t *testing.T) {
@@ -112,11 +114,21 @@ func TestLoginSubmit_LocksAfterMaxAttempts(t *testing.T) {
 	// Limiter config: MaxAttempts=3
 	for i := 0; i < 3; i++ {
 		resp := postForm(app, "/admin/login", testUser, "wrong")
-		require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+		require.Equal(t, http.StatusSeeOther, resp.StatusCode)
 	}
 	// 4th attempt: now locked.
 	resp := postForm(app, "/admin/login", testUser, "wrong")
-	require.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
+	require.Equal(t, http.StatusSeeOther, resp.StatusCode)
+	require.Equal(t, "/admin/login?err=locked", resp.Header.Get("Location"))
+}
+
+func TestLoginPage_ShowsCSRFError(t *testing.T) {
+	app, _ := buildApp(t)
+	req := httptest.NewRequest(http.MethodGet, "/admin/login?err=csrf", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	body, _ := io.ReadAll(resp.Body)
+	require.Contains(t, string(body), "CSRF")
 }
 
 func TestLogout_ClearsCookie(t *testing.T) {

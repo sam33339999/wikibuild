@@ -1,7 +1,8 @@
 package admin
 
 // Login renders the admin login form with site chrome styling.
-templ Login(csrfToken string) {
+// errKey is an optional query error: csrf | cred | locked | other.
+templ Login(csrfToken string, errKey string) {
 	<!doctype html>
 	<html lang="zh-Hant">
 		<head>
@@ -17,6 +18,19 @@ templ Login(csrfToken string) {
 			<div class="login-card">
 				<p class="eyebrow">後台</p>
 				<h1>登入</h1>
+				if errKey == "csrf" {
+					<p class="login-error" role="alert">
+						CSRF 驗證失敗（Forbidden）。請<strong>重新整理本頁</strong>後再登入一次，
+						並確認瀏覽器允許 cookie（站點 cookie <code>csrf_</code>）。
+						若走反向代理／HTTPS，請確認沒有剝掉 Set-Cookie。
+					</p>
+				} else if errKey == "cred" {
+					<p class="login-error" role="alert">帳號或密碼錯誤。若剛改 .env，請在主機執行 <code>go run ./cmd/resetadmin</code> 再重試。</p>
+				} else if errKey == "locked" {
+					<p class="login-error" role="alert">嘗試次數過多，請稍後再試。</p>
+				} else if errKey != "" {
+					<p class="login-error" role="alert">登入失敗，請重試。</p>
+				}
 				<form method="post" action="/admin/login">
 					<input type="hidden" name="_csrf" value={ csrfToken }/>
 					<p>

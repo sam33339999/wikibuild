@@ -52,11 +52,12 @@ func NewAdminAuth(d AdminAuthDeps) *AdminAuth {
 }
 
 // LoginPage renders the login form via templ. The CSRF token from the
-// middleware is embedded as a hidden field.
+// middleware is embedded as a hidden field. Optional ?err=csrf|cred|locked.
 func (h *AdminAuth) LoginPage(c fiber.Ctx) error {
 	tok := csrf.TokenFromContext(c)
+	errKey := c.Query("err")
 	var buf bytes.Buffer
-	if err := adminviews.Login(tok).Render(c.Context(), &buf); err != nil {
+	if err := adminviews.Login(tok, errKey).Render(c.Context(), &buf); err != nil {
 		return err
 	}
 	return c.Type("html").Send(buf.Bytes())
@@ -64,10 +65,12 @@ func (h *AdminAuth) LoginPage(c fiber.Ctx) error {
 
 // LoginSubmit authenticates an admin and sets a signed session cookie.
 // It is brute-force protected by the LoginLimiter keyed on client IP.
+// Form failures redirect back to login with ?err= for readable messages
+// (bare 403/401 bodies are easy to miss in browsers).
 func (h *AdminAuth) LoginSubmit(c fiber.Ctx) error {
 	ip := c.IP()
 	if h.deps.Limiter.IsLocked(ip) {
-		return c.Status(http.StatusTooManyRequests).SendString("too many attempts, try later")
+		return c.Redirect().To("/admin/login?err=locked")
 	}
 
 	username := c.FormValue("username")
@@ -77,14 +80,14 @@ func (h *AdminAuth) LoginSubmit(c fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			h.deps.Limiter.RegisterFailure(ip)
-			return c.Status(http.StatusUnauthorized).SendString("invalid credentials")
+			return c.Redirect().To("/admin/login?err=cred")
 		}
 		return err
 	}
 
 	if err := h.deps.Hasher.Compare(user.PasswordHash, password); err != nil {
 		h.deps.Limiter.RegisterFailure(ip)
-		return c.Status(http.StatusUnauthorized).SendString("invalid credentials")
+		return c.Redirect().To("/admin/login?err=cred")
 	}
 
 	h.deps.Limiter.RegisterSuccess(ip)
